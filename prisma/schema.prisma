@@ -1,0 +1,275 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  ACCOUNTANT
+  PROJECT_MANAGER
+  DATA_ENTRY_OPERATOR
+}
+
+enum ProjectStatus {
+  PLANNING
+  RUNNING
+  COMPLETED
+  ARCHIVED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LEAVE
+}
+
+enum SalaryStatus {
+  PAID
+  PARTIAL
+  DUE
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  role         Role       @default(DATA_ENTRY_OPERATOR)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Project {
+  id                     String        @id @default(uuid())
+  name                   String
+  code                   String        @unique
+  clientName             String
+  clientContactNumber    String
+  projectLocation        String
+  startDate              DateTime
+  expectedCompletionDate DateTime
+  estimatedBudget        Float
+  status                 ProjectStatus @default(PLANNING)
+  description            String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  materials    Material[]
+  cashIns      CashIn[]
+  cashOuts     CashOut[]
+  labours      Labour[]
+  documents    Document[]
+  attendances  Attendance[]
+}
+
+model Supplier {
+  id             String     @id @default(uuid())
+  name           String
+  companyName    String?
+  phoneNumber    String
+  email          String?
+  address        String?
+  openingBalance Float      @default(0.0)
+  currentDue     Float      @default(0.0)
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  materials Material[]
+  cashOuts  CashOut[]
+  documents Document[]
+}
+
+model Contractor {
+  id             String     @id @default(uuid())
+  name           String
+  companyName    String?
+  contactNumber  String
+  address        String?
+  workType       String // e.g. Civil, Electrical, Plumbing
+  contractAmount Float      @default(0.0)
+  paidAmount     Float      @default(0.0)
+  dueAmount      Float      @default(0.0)
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  cashOuts  CashOut[]
+  documents Document[]
+}
+
+model Employee {
+  id               String           @id @default(uuid())
+  employeeId       String           @unique // custom ID like EMP-001
+  fullName         String
+  designation      String
+  department       String
+  phoneNumber      String
+  email            String?
+  joiningDate      DateTime
+  monthlySalary    Float
+  employmentStatus String           @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  salaries  Salary[]
+  cashOuts  CashOut[]
+  documents Document[]
+}
+
+model Labour {
+  id               String           @id @default(uuid())
+  name             String
+  phoneNumber      String
+  trade            String // e.g. Mason, Electrician, Helper
+  dailyWage        Float
+  employmentStatus String           @default("ACTIVE") // ACTIVE, INACTIVE
+  projectId        String
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  attendances Attendance[]
+  cashOuts    CashOut[]
+  documents   Document[]
+}
+
+model Attendance {
+  id        String           @id @default(uuid())
+  date      DateTime
+  status    AttendanceStatus @default(PRESENT)
+  labourId  String
+  labour    Labour           @relation(fields: [labourId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([labourId, date])
+}
+
+model Material {
+  id            String    @id @default(uuid())
+  name          String
+  category      String // e.g. Cement, Steel, Sand, Bricks
+  quantity      Float
+  unit          String // e.g. Bags, Tons, CFT, Pcs
+  unitPrice     Float
+  totalPrice    Float
+  supplierId    String
+  supplier      Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  purchaseDate  DateTime
+  invoiceNumber String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  cashOuts CashOut[]
+}
+
+model CashIn {
+  id              String   @id @default(uuid())
+  date            DateTime
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  clientName      String
+  amount          Float
+  paymentMethod   String // e.g. CASH, BANK, CHEQUE, MOBILE_BANKING
+  bankOrCash      String // Name of account or "Cash in Hand"
+  referenceNumber String?
+  source          String // e.g. CLIENT_PAYMENT, ADVANCE_PAYMENT, INSTALLMENT, OTHER_INCOME
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CashOut {
+  id              String    @id @default(uuid())
+  date            DateTime
+  projectId       String?
+  project         Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  expenseCategory String // e.g. MATERIALS, LABOR, EMPLOYEE_SALARY, CONTRACTOR_PAYMENT, OFFICE_RENT, UTILITIES, TRANSPORTATION, FUEL, EQUIPMENT_RENTAL, MISCELLANEOUS
+  paidTo          String
+  amount          Float
+  paymentMethod   String // e.g. CASH, BANK, CHEQUE, MOBILE_BANKING
+  referenceNumber String?
+  notes           String?
+  
+  // Relations to track specific disbursements
+  supplierId      String?
+  supplier        Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  contractorId    String?
+  contractor      Contractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  employeeId      String?
+  employee        Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  labourId        String?
+  labour          Labour?     @relation(fields: [labourId], references: [id], onDelete: SetNull)
+  materialId      String?
+  material        Material?   @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  salaryId        String?
+  salary          Salary?     @relation(fields: [salaryId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Salary {
+  id            String       @id @default(uuid())
+  employeeId    String
+  employee      Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month         String // Format: YYYY-MM
+  basicSalary   Float
+  bonus         Float        @default(0.0)
+  deduction     Float        @default(0.0)
+  netSalary     Float
+  paidAmount    Float        @default(0.0)
+  dueAmount     Float        @default(0.0)
+  paymentStatus SalaryStatus @default(DUE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  cashOuts CashOut[]
+
+  @@unique([employeeId, month])
+}
+
+model Document {
+  id                String      @id @default(uuid())
+  name              String
+  url               String // URL or file path in supabase storage
+  uploadDate        DateTime    @default(now())
+  description       String?
+  fileType          String // PDF, IMAGE, EXCEL, WORD, etc.
+  category          String // CONTRACT, INVOICE, CHALLAN, QUOTATION, OTHER
+  
+  projectId         String?
+  project           Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  supplierId        String?
+  supplier          Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  contractorId      String?
+  contractor        Contractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  employeeId        String?
+  employee          Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  labourId          String?
+  labour            Labour?     @relation(fields: [labourId], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // e.g. CREATE_PROJECT, UPDATE_EXPENSE
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+}

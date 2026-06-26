@@ -1,0 +1,563 @@
+'use client';
+
+/**
+ * CPMAS — Suppliers Registry
+ * Powered by RTK Query, React Hook Form, and Zod schema validation.
+ */
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/useToast';
+import {
+  useGetSuppliersQuery,
+  useCreateSupplierMutation,
+  useUpdateSupplierMutation,
+  useDeleteSupplierMutation,
+  ApiSupplier,
+} from '@/store/api/cpmasApi';
+import { supplierSchema, SupplierFormValues } from '@/lib/schemas';
+import {
+  Truck,
+  Plus,
+  Search,
+  Phone,
+  Mail,
+  MapPin,
+  X,
+  Trash2,
+  Edit2,
+  Loader2,
+  Clock,
+  History,
+} from 'lucide-react';
+
+export default function SuppliersPage() {
+  const { user } = useAuth();
+  const { success: showSuccessToast, error: showErrorToast } = useToast();
+
+  // Queries & Mutations
+  const { data, isLoading: isFetching, error: fetchError } = useGetSuppliersQuery();
+  const [createSupplier, { isLoading: isCreating }] = useCreateSupplierMutation();
+  const [updateSupplier, { isLoading: isUpdating }] = useUpdateSupplierMutation();
+  const [deleteSupplier, { isLoading: isDeleting }] = useDeleteSupplierMutation();
+
+  const suppliers = data?.suppliers || [];
+
+  // Search filter state
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Form modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+
+  // History slide-over drawer state
+  const [selectedSupplier, setSelectedSupplier] = useState<ApiSupplier | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // React Hook Form setup
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<SupplierFormValues>({
+    resolver: zodResolver(supplierSchema),
+    defaultValues: {
+      name: '',
+      companyName: '',
+      phoneNumber: '',
+      email: '',
+      address: '',
+      openingBalance: '0',
+      notes: '',
+    },
+    mode: 'onBlur',
+  });
+
+  // Track updates to selected supplier when lists refresh
+  useEffect(() => {
+    if (selectedSupplier) {
+      const updated = suppliers.find((s) => s.id === selectedSupplier.id);
+      if (updated) {
+        setSelectedSupplier(updated);
+      }
+    }
+  }, [suppliers, selectedSupplier]);
+
+  const handleOpenCreate = () => {
+    setModalMode('create');
+    setSelectedSupplierId(null);
+    reset({
+      name: '',
+      companyName: '',
+      phoneNumber: '',
+      email: '',
+      address: '',
+      openingBalance: '0',
+      notes: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (sup: ApiSupplier, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setModalMode('edit');
+    setSelectedSupplierId(sup.id);
+    reset({
+      name: sup.name,
+      companyName: sup.companyName || '',
+      phoneNumber: sup.phoneNumber,
+      email: sup.email || '',
+      address: sup.address || '',
+      openingBalance: sup.openingBalance.toString(),
+      notes: sup.notes || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        'Delete this supplier? All linked historical invoices and purchases will no longer reference this supplier.'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteSupplier(id).unwrap();
+      showSuccessToast('Supplier deleted successfully');
+      if (selectedSupplier?.id === id) {
+        setIsHistoryOpen(false);
+      }
+    } catch (err: any) {
+      showErrorToast(err?.data?.error || 'Failed to delete supplier');
+    }
+  };
+
+  const onSubmit = async (values: SupplierFormValues) => {
+    try {
+      const payload = {
+        ...values,
+        openingBalance: parseFloat(values.openingBalance || '0'),
+      };
+      if (modalMode === 'create') {
+        await createSupplier(payload).unwrap();
+        showSuccessToast('Supplier profile created');
+      } else if (selectedSupplierId) {
+        await updateSupplier({ id: selectedSupplierId, ...payload }).unwrap();
+        showSuccessToast('Supplier profile updated');
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      showErrorToast(err?.data?.error || 'Failed to save supplier profile');
+    }
+  };
+
+  const handleViewHistory = (sup: ApiSupplier) => {
+    setSelectedSupplier(sup);
+    setIsHistoryOpen(true);
+  };
+
+  const filteredSuppliers = suppliers.filter(
+    (sup) =>
+      sup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sup.companyName && sup.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
+  const isBusy = isCreating || isUpdating;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
+            <Truck className="h-5.5 w-5.5 text-cyan-400" />
+            Supplier Registry
+          </h1>
+          <p className="text-slate-500 text-xs mt-0.5">
+            Log procurement vendors, raw material purchases, outstanding liabilities and dues
+          </p>
+        </div>
+
+        {user && user.role !== 'PROJECT_MANAGER' && (
+          <button
+            onClick={handleOpenCreate}
+            className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all cursor-pointer text-xs"
+          >
+            <Plus className="h-4.5 w-4.5" />
+            <span>New Supplier</span>
+          </button>
+        )}
+      </div>
+
+      {/* Filter */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+        <input
+          type="text"
+          placeholder="Search by company or supplier name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
+        />
+      </div>
+
+      {/* Suppliers Table/Grid */}
+      {isFetching ? (
+        <div className="h-96 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-400 mb-3" />
+          <span className="text-slate-500 text-xs font-semibold">Loading suppliers database...</span>
+        </div>
+      ) : fetchError ? (
+        <div className="h-96 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10 text-center px-6">
+          <Truck className="h-10 w-10 text-rose-500 mb-3" />
+          <p className="text-slate-350 text-sm font-semibold">Failed to fetch suppliers registry</p>
+          <p className="text-slate-500 text-xs mt-1">Please try refreshing the page.</p>
+        </div>
+      ) : filteredSuppliers.length === 0 ? (
+        <div className="h-96 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10 text-center px-4">
+          <Truck className="h-12 w-12 text-slate-800 mb-3" />
+          <p className="text-slate-400 text-sm font-bold">No suppliers registered</p>
+          <p className="text-slate-600 text-xs mt-1 max-w-xs mx-auto">
+            {searchTerm
+              ? 'Try adjusting your search criteria.'
+              : 'Add a materials supplier to begin logging material purchases.'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredSuppliers.map((sup) => (
+            <div
+              key={sup.id}
+              onClick={() => handleViewHistory(sup)}
+              className="bg-slate-900/25 border border-slate-800/80 rounded-2xl p-6 transition-all hover:border-slate-700/85 cursor-pointer flex flex-col justify-between group relative overflow-hidden backdrop-blur-md hover:shadow-xl"
+            >
+              <div>
+                <h3 className="font-bold text-slate-200 text-sm group-hover:text-cyan-450 transition-colors">
+                  {sup.name}
+                </h3>
+                {sup.companyName && (
+                  <p className="text-slate-400 text-xs font-semibold mt-0.5">{sup.companyName}</p>
+                )}
+                {sup.notes && (
+                  <p className="text-slate-500 text-[11px] mt-2.5 line-clamp-2 leading-relaxed font-medium">
+                    {sup.notes}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-6 border-t border-slate-800/80 pt-4 space-y-2">
+                <div className="flex items-center text-[11px] text-slate-400 gap-2">
+                  <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <span>{sup.phoneNumber}</span>
+                </div>
+                {sup.email && (
+                  <div className="flex items-center text-[11px] text-slate-400 gap-2">
+                    <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                    <span className="truncate">{sup.email}</span>
+                  </div>
+                )}
+                {sup.address && (
+                  <div className="flex items-center text-[11px] text-slate-400 gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                    <span className="truncate">{sup.address}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-slate-800/40 pt-3 text-[11px]">
+                  <span className="text-slate-400 font-semibold">Total Purchases:</span>
+                  <span className="font-bold text-slate-200">
+                    {(sup.materials || []).length} Invoice(s)
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-semibold">Outstanding Due:</span>
+                  <span className={`font-bold ${sup.currentDue > 0 ? 'text-amber-400' : 'text-slate-450'}`}>
+                    {formatCurrency(sup.currentDue)}
+                  </span>
+                </div>
+              </div>
+
+              {user && user.role !== 'PROJECT_MANAGER' && (
+                <div className="mt-4 pt-3 border-t border-slate-800/40 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) => handleOpenEdit(sup, e)}
+                    className="p-2 text-slate-450 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
+                    title="Edit supplier"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
+                    <button
+                      onClick={(e) => handleDelete(sup.id, e)}
+                      className="p-2 text-slate-450 hover:text-rose-455 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                      title="Delete supplier"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* History Drawer */}
+      {isHistoryOpen && selectedSupplier && (
+        <div className="fixed inset-y-0 right-0 z-50 flex max-w-full pl-10">
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsHistoryOpen(false)} />
+          <div className="w-screen max-w-xl bg-slate-900 border-l border-slate-800 relative flex flex-col h-full shadow-2xl animate-in slide-in-from-right duration-350">
+            <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950/20 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-slate-200 text-sm leading-none">{selectedSupplier.name}</h2>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-1">Vendor Account Statement</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsHistoryOpen(false)}
+                className="text-slate-400 hover:text-slate-100 p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Purchases Logs */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-350 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2 flex items-center gap-2">
+                  <History className="h-4 w-4 text-cyan-400" />
+                  Material Purchases History
+                </h3>
+                {!selectedSupplier.materials || selectedSupplier.materials.length === 0 ? (
+                  <p className="text-slate-500 text-xs italic">No purchase records registered.</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {selectedSupplier.materials.map((m: any) => (
+                      <div
+                        key={m.id}
+                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl flex items-center justify-between shadow-sm"
+                      >
+                        <div>
+                          <p className="font-semibold text-slate-200">
+                            {m.name} ({m.quantity} {m.unit})
+                          </p>
+                          <span className="text-[10px] text-slate-500 block mt-0.5 font-medium">
+                            Invoice: {m.invoiceNumber || 'N/A'} •{' '}
+                            {new Date(m.purchaseDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <span className="font-bold text-cyan-400">{formatCurrency(m.totalPrice)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Payments Logs */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-350 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-emerald-450" />
+                  Disbursed Payments History
+                </h3>
+                {!selectedSupplier.cashOuts || selectedSupplier.cashOuts.length === 0 ? (
+                  <p className="text-slate-500 text-xs italic">No outgoing cash payments registered.</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {selectedSupplier.cashOuts.map((co: any) => (
+                      <div
+                        key={co.id}
+                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl flex items-center justify-between shadow-sm"
+                      >
+                        <div>
+                          <p className="font-semibold text-slate-200">Paid via {co.paymentMethod}</p>
+                          <span className="text-[10px] text-slate-500 block mt-0.5 font-medium">
+                            {new Date(co.date).toLocaleDateString()} • Ref:{' '}
+                            {co.referenceNumber || 'N/A'}
+                          </span>
+                        </div>
+                        <span className="font-bold text-emerald-400">{formatCurrency(co.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CRUD Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
+              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
+                <Truck className="h-4.5 w-4.5 text-cyan-400" />
+                {modalMode === 'create' ? 'Create Supplier Profile' : 'Edit Supplier Profile'}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Supplier Name</label>
+                  <input
+                    type="text"
+                    {...register('name')}
+                    placeholder="e.g. Apex Materials"
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.name
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  />
+                  {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Company Name</label>
+                  <input
+                    type="text"
+                    {...register('companyName')}
+                    placeholder="e.g. Apex Materials Group"
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.companyName
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  />
+                  {errors.companyName && (
+                    <p className="text-rose-400 text-[10px] mt-1">{errors.companyName.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Phone Number</label>
+                  <input
+                    type="text"
+                    {...register('phoneNumber')}
+                    placeholder="e.g. +1 555-4567"
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.phoneNumber
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  />
+                  {errors.phoneNumber && (
+                    <p className="text-rose-400 text-[10px] mt-1">{errors.phoneNumber.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    {...register('email')}
+                    placeholder="e.g. sales@apex.com"
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.email
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  />
+                  {errors.email && <p className="text-rose-400 text-[10px] mt-1">{errors.email.message}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold mb-2">Address</label>
+                <input
+                  type="text"
+                  {...register('address')}
+                  placeholder="e.g. Industrial Zone Block C"
+                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                    errors.address
+                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                  }`}
+                />
+                {errors.address && <p className="text-rose-400 text-[10px] mt-1">{errors.address.message}</p>}
+              </div>
+
+              {modalMode === 'create' && (
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Opening Balance ($)</label>
+                  <input
+                    type="text"
+                    {...register('openingBalance')}
+                    placeholder="0.00"
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.openingBalance
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  />
+                  {errors.openingBalance && (
+                    <p className="text-rose-400 text-[10px] mt-1">{errors.openingBalance.message}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold mb-2">Notes</label>
+                <textarea
+                  rows={2}
+                  {...register('notes')}
+                  placeholder="e.g. Structural steel supply partner..."
+                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                    errors.notes
+                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                  }`}
+                />
+                {errors.notes && <p className="text-rose-400 text-[10px] mt-1">{errors.notes.message}</p>}
+              </div>
+
+              <div className="pt-4 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isBusy}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{modalMode === 'create' ? 'Create Supplier' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

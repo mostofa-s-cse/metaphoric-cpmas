@@ -1,0 +1,162 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const [cashIns, cashOuts] = await Promise.all([
+      prisma.cashIn.findMany({
+        orderBy: { date: 'desc' },
+        include: { project: { select: { name: true, code: true } } },
+      }),
+      prisma.cashOut.findMany({
+        orderBy: { date: 'desc' },
+        include: {
+          project: { select: { name: true, code: true } },
+          supplier: { select: { name: true } },
+          contractor: { select: { name: true } },
+          employee: { select: { fullName: true } },
+        },
+      }),
+    ]);
+
+    return NextResponse.json({ cashIns, cashOuts });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to fetch financial ledger' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // RBAC: PM cannot enter arbitrary cash entries, but operators, accountants and admins can
+    if (user.role === 'PROJECT_MANAGER') {
+      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const {
+      type, // 'CASHIN' | 'CASHOUT'
+      date,
+      projectId,
+      amount,
+      paymentMethod,
+      referenceNumber,
+      notes,
+      
+      // CashIn specific
+      clientName,
+      source,
+      bankOrCash,
+
+      // CashOut specific
+      expenseCategory,
+      paidTo,
+      supplierId,
+      contractorId,
+      employeeId,
+    } = body;
+
+    if (!type || !date || !amount || !paymentMethod) {
+      return NextResponse.json({ error: 'Missing required transactional details' }, { status: 400 });
+    }
+
+    const txnAmount = parseFloat(amount);
+
+    if (type === 'CASHIN') {
+      if (!clientName || !source || !bankOrCash) {
+        return NextResponse.json({ error: 'Missing required Cash In details' }, { status: 400 });
+      }
+
+      const cashIn = await prisma.cashIn.create({
+        data: {
+          date: new Date(date),
+          projectId: projectId || null,
+          clientName,
+          amount: txnAmount,
+          paymentMethod,
+          bankOrCash,
+          referenceNumber,
+          source,
+          notes,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'CREATE_CASH_IN',
+          details: `Recorded Cash In: $${txnAmount} from ${clientName} (${source})`,
+        },
+      });
+
+      return NextResponse.json({ success: true, transaction: cashIn });
+    } else if (type === 'CASHOUT') {
+      if (!expenseCategory || !paidTo) {
+        return NextResponse.json({ error: 'Missing required Cash Out details' }, { status: 400 });
+      }
+
+      const cashOut = await prisma.cashOut.create({
+        data: {
+          date: new Date(date),
+          projectId: projectId || null,
+          expenseCategory,
+          paidTo,
+          amount: txnAmount,
+          paymentMethod,
+          referenceNumber,
+          notes,
+          supplierId: supplierId || null,
+          contractorId: contractorId || null,
+          employeeId: employeeId || null,
+        },
+      });
+
+      // Update contractor balances if contractor payment
+      if (contractorId) {
+        await prisma.contractor.update({
+          where: { id: contractorId },
+          data: {
+            paidAmount: { increment: txnAmount },
+            dueAmount: { decrement: txnAmount },
+          },
+        });
+      }
+
+      // Update supplier balances if supplier payment
+      if (supplierId) {
+        await prisma.supplier.update({
+          where: { id: supplierId },
+          data: {
+            currentDue: { decrement: txnAmount },
+          },
+        });
+      }
+
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'CREATE_CASH_OUT',
+          details: `Recorded Cash Out: $${txnAmount} for ${expenseCategory} to ${paidTo}`,
+        },
+      });
+
+      return NextResponse.json({ success: true, transaction: cashOut });
+    } else {
+      return NextResponse.json({ error: 'Invalid transaction type specified' }, { status: 400 });
+    }
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to record transaction' }, { status: 500 });
+  }
+}
