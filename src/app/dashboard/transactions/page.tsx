@@ -4,8 +4,12 @@
  * CPMAS — Financial Ledger (Transactions)
  * Powered by RTK Query, React Hook Form, and Zod validation.
  */
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { DatePickerInput } from '@/components/ui/DatePickerInput';
+import { Modal } from '@/components/ui/Modal';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -46,6 +50,14 @@ export default function TransactionsPage() {
   const [activeTab, setActiveTab] = useState<'cashin' | 'cashout'>('cashin');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; type: 'in' | 'out' } | null>(null);
+
   // Queries & Mutations
   const { data: cashInResponse, isLoading: isFetchingCashIn, error: cashInError } = useGetCashInsQuery();
   const { data: cashOutResponse, isLoading: isFetchingCashOut, error: cashOutError } = useGetCashOutsQuery();
@@ -69,6 +81,7 @@ export default function TransactionsPage() {
     register: registerCashIn,
     handleSubmit: handleSubmitCashIn,
     reset: resetCashIn,
+    control: controlCashIn,
     formState: { errors: cashInErrors },
   } = useForm<CashInFormValues>({
     resolver: zodResolver(cashInSchema),
@@ -91,6 +104,7 @@ export default function TransactionsPage() {
     register: registerCashOut,
     handleSubmit: handleSubmitCashOut,
     reset: resetCashOut,
+    control: controlCashOut,
     formState: { errors: cashOutErrors },
   } = useForm<CashOutFormValues>({
     resolver: zodResolver(cashOutSchema),
@@ -167,18 +181,22 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleDeleteTransaction = async (id: string, type: 'in' | 'out') => {
-    if (!window.confirm('Are you sure you want to delete this transaction record?')) {
-      return;
-    }
+  const handleDeleteClick = (id: string, type: 'in' | 'out') => {
+    setTransactionToDelete({ id, type });
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return;
     try {
-      if (type === 'in') {
-        await deleteCashIn(id).unwrap();
+      if (transactionToDelete.type === 'in') {
+        await deleteCashIn(transactionToDelete.id).unwrap();
       } else {
-        await deleteCashOut(id).unwrap();
+        await deleteCashOut(transactionToDelete.id).unwrap();
       }
       showSuccessToast('Transaction deleted successfully');
+      setDeleteConfirmOpen(false);
+      setTransactionToDelete(null);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete transaction');
     }
@@ -191,6 +209,10 @@ export default function TransactionsPage() {
         : `${t.paidTo} ${t.expenseCategory} ${t.notes || ''}`;
     return text.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  useEffect(() => { setPage(1); }, [searchTerm, activeTab]);
+
+  const paginatedTransactions = filteredTransactions.slice((page - 1) * limit, page * limit);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -316,7 +338,7 @@ export default function TransactionsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {filteredTransactions.map((t: any) => (
+                  {paginatedTransactions.map((t: any) => (
                     <tr key={t.id} className="hover:bg-slate-800/20 transition-colors">
                       <td className="p-4 text-slate-550 font-mono text-[10px]">
                         {new Date(t.date).toLocaleDateString()}
@@ -345,8 +367,8 @@ export default function TransactionsPage() {
                       {user?.role === 'SUPER_ADMIN' && (
                         <td className="p-4 text-right">
                           <button
-                            onClick={() => handleDeleteTransaction(t.id, 'in')}
-                            className="p-1.5 text-slate-555 hover:text-rose-455 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                            onClick={() => handleDeleteClick(t.id, 'in')}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -370,7 +392,7 @@ export default function TransactionsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {filteredTransactions.map((t: any) => (
+                  {paginatedTransactions.map((t: any) => (
                     <tr key={t.id} className="hover:bg-slate-800/20 transition-colors">
                       <td className="p-4 text-slate-550 font-mono text-[10px]">
                         {new Date(t.date).toLocaleDateString()}
@@ -394,8 +416,8 @@ export default function TransactionsPage() {
                       {user?.role === 'SUPER_ADMIN' && (
                         <td className="p-4 text-right">
                           <button
-                            onClick={() => handleDeleteTransaction(t.id, 'out')}
-                            className="p-1.5 text-slate-555 hover:text-rose-455 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                            onClick={() => handleDeleteClick(t.id, 'out')}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -407,27 +429,30 @@ export default function TransactionsPage() {
               </table>
             )}
           </div>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(filteredTransactions.length / limit)}
+            totalItems={filteredTransactions.length}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          />
         </div>
       )}
 
       {/* Cash In Modal */}
-      {isCashInModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <ArrowUpRight className="h-4.5 w-4.5 text-cyan-400" />
-                Record Incoming Client Payment
-              </h2>
-              <button
-                onClick={() => setIsCashInModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitCashIn(onCashInSubmit)} className="space-y-4">
+      <Modal
+        open={isCashInModalOpen}
+        onClose={() => setIsCashInModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <ArrowUpRight className="h-4.5 w-4.5 text-cyan-400" />
+            Record Incoming Client Payment
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmitCashIn(onCashInSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Paid By (Client)</label>
@@ -438,7 +463,7 @@ export default function TransactionsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       cashInErrors.clientName
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {cashInErrors.clientName && (
@@ -455,7 +480,7 @@ export default function TransactionsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       cashInErrors.amount
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {cashInErrors.amount && (
@@ -469,7 +494,7 @@ export default function TransactionsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Receipt Category</label>
                   <select
                     {...registerCashIn('source')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="CLIENT_PAYMENT">Client Progress Invoice</option>
                     <option value="ADVANCE_PAYMENT">Project Mobilization Advance</option>
@@ -482,7 +507,7 @@ export default function TransactionsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
                   <select
                     {...registerCashIn('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="">General Corporate Income (No Project)</option>
                     {projects.map((p) => (
@@ -497,14 +522,17 @@ export default function TransactionsPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Receipt Date</label>
-                  <input
-                    type="date"
-                    {...registerCashIn('date')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashInErrors.date
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                  <Controller
+                    name="date"
+                    control={controlCashIn}
+                    render={({ field }) => (
+                      <DatePickerInput
+                        id="cashInDate"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={!!cashInErrors.date}
+                      />
+                    )}
                   />
                   {cashInErrors.date && <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.date.message}</p>}
                 </div>
@@ -513,7 +541,7 @@ export default function TransactionsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Payment Method</label>
                   <select
                     {...registerCashIn('paymentMethod')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="BANK">Bank Transfer</option>
                     <option value="CASH">Cash</option>
@@ -530,7 +558,7 @@ export default function TransactionsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       cashInErrors.referenceNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {cashInErrors.referenceNumber && (
@@ -550,7 +578,7 @@ export default function TransactionsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     cashInErrors.bankOrCash
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {cashInErrors.bankOrCash && (
@@ -567,7 +595,7 @@ export default function TransactionsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     cashInErrors.notes
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {cashInErrors.notes && <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.notes.message}</p>}
@@ -591,28 +619,21 @@ export default function TransactionsPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Cash Out Modal */}
-      {isCashOutModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <ArrowDownRight className="h-4.5 w-4.5 text-rose-455" />
-                Record Outgoing Cash Disbursement
-              </h2>
-              <button
-                onClick={() => setIsCashOutModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitCashOut(onCashOutSubmit)} className="space-y-4">
+      <Modal
+        open={isCashOutModalOpen}
+        onClose={() => setIsCashOutModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <ArrowDownRight className="h-4.5 w-4.5 text-rose-455" />
+            Record Outgoing Cash Disbursement
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmitCashOut(onCashOutSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Paid To (Vendor/Labour)</label>
@@ -623,7 +644,7 @@ export default function TransactionsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       cashOutErrors.paidTo
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {cashOutErrors.paidTo && (
@@ -640,7 +661,7 @@ export default function TransactionsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       cashOutErrors.amount
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {cashOutErrors.amount && (
@@ -654,7 +675,7 @@ export default function TransactionsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Expense Category</label>
                   <select
                     {...registerCashOut('expenseCategory')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="MATERIALS">Raw Materials Purchase</option>
                     <option value="LABOR">Site Labor Daily Wages</option>
@@ -672,7 +693,7 @@ export default function TransactionsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Project</label>
                   <select
                     {...registerCashOut('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="">Corporate Overhead (General Corporate)</option>
                     {projects.map((p) => (
@@ -687,14 +708,17 @@ export default function TransactionsPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Disbursement Date</label>
-                  <input
-                    type="date"
-                    {...registerCashOut('date')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashOutErrors.date
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                  <Controller
+                    name="date"
+                    control={controlCashOut}
+                    render={({ field }) => (
+                      <DatePickerInput
+                        id="cashOutDate"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={!!cashOutErrors.date}
+                      />
+                    )}
                   />
                   {cashOutErrors.date && (
                     <p className="text-rose-400 text-[10px] mt-1">{cashOutErrors.date.message}</p>
@@ -705,7 +729,7 @@ export default function TransactionsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Payment Method</label>
                   <select
                     {...registerCashOut('paymentMethod')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="CASH">Cash in Hand</option>
                     <option value="BANK">Bank Transfer</option>
@@ -722,7 +746,7 @@ export default function TransactionsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       cashOutErrors.referenceNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {cashOutErrors.referenceNumber && (
@@ -740,7 +764,7 @@ export default function TransactionsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     cashOutErrors.notes
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {cashOutErrors.notes && (
@@ -766,9 +790,17 @@ export default function TransactionsPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Transaction?"
+        description="Are you sure you want to delete this transaction record? This action cannot be undone."
+        confirmText="Delete"
+      />
     </div>
   );
 }

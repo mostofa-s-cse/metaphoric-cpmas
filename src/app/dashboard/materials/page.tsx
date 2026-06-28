@@ -4,8 +4,12 @@
  * CPMAS — Materials Management
  * Powered by RTK Query, React Hook Form, and Zod schema validation.
  */
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { DatePickerInput } from '@/components/ui/DatePickerInput';
+import { Modal } from '@/components/ui/Modal';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -50,14 +54,23 @@ export default function MaterialsPage() {
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   // Form modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [materialToDelete, setMaterialToDelete] = useState<string | null>(null);
 
   // React Hook Form setup
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<MaterialFormValues>({
     resolver: zodResolver(materialSchema),
@@ -99,18 +112,18 @@ export default function MaterialsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (
-      !window.confirm(
-        'Delete this purchase record? The associated expense transaction logged under the project accounts will also be deleted.'
-      )
-    ) {
-      return;
-    }
+  const handleDeleteClick = (id: string) => {
+    setMaterialToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!materialToDelete) return;
     try {
-      await deleteMaterial(id).unwrap();
+      await deleteMaterial(materialToDelete).unwrap();
       showSuccessToast('Purchase record deleted');
+      setDeleteConfirmOpen(false);
+      setMaterialToDelete(null);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete record');
     }
@@ -138,6 +151,10 @@ export default function MaterialsPage() {
       mat.project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mat.supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  useEffect(() => { setPage(1); }, [searchTerm]);
+
+  const paginatedMaterials = filteredMaterials.slice((page - 1) * limit, page * limit);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -220,8 +237,8 @@ export default function MaterialsPage() {
                   {user && user.role !== 'ACCOUNTANT' && <th className="py-4.5 px-6 text-right">Delete</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850 text-xs">
-                {filteredMaterials.map((mat) => (
+              <tbody className="divide-y divide-slate-800 text-xs">
+                {paginatedMaterials.map((mat) => (
                   <tr key={mat.id} className="hover:bg-slate-900/40 transition-colors">
                     <td className="py-4.5 px-6">
                       <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
@@ -257,8 +274,8 @@ export default function MaterialsPage() {
                     {user && user.role !== 'ACCOUNTANT' && (
                       <td className="py-4.5 px-6 text-right">
                         <button
-                          onClick={() => handleDelete(mat.id)}
-                          className="p-2 text-slate-450 hover:text-rose-455 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                          onClick={() => handleDeleteClick(mat.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -269,197 +286,212 @@ export default function MaterialsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(filteredMaterials.length / limit)}
+            totalItems={filteredMaterials.length}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          />
         </div>
       )}
 
       {/* Log Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <PackageSearch className="h-4.5 w-4.5 text-cyan-400" />
-                Log Material Purchase Invoice
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <PackageSearch className="h-4.5 w-4.5 text-cyan-400" />
+            Log Material Purchase Invoice
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Item Name</label>
+              <input
+                type="text"
+                {...register('name')}
+                placeholder="e.g. Portland Cement 50Grade"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  errors.name
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
+              />
+              {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Item Name</label>
-                  <input
-                    type="text"
-                    {...register('name')}
-                    placeholder="e.g. Portland Cement 50Grade"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.name
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Category</label>
-                  <select
-                    {...register('category')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all"
-                  >
-                    <option value="Cement">Cement</option>
-                    <option value="Steel &amp; Rebar">Steel &amp; Rebar</option>
-                    <option value="Bricks &amp; Blocks">Bricks &amp; Blocks</option>
-                    <option value="Sand &amp; Aggregates">Sand &amp; Aggregates</option>
-                    <option value="Pipes &amp; Plumbing">Pipes &amp; Plumbing</option>
-                    <option value="Electricals">Electricals</option>
-                    <option value="Wood &amp; Timber">Wood &amp; Timber</option>
-                    <option value="Chemicals &amp; Paint">Chemicals &amp; Paint</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Quantity</label>
-                  <input
-                    type="text"
-                    {...register('quantity')}
-                    placeholder="e.g. 500"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.quantity
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.quantity && <p className="text-rose-400 text-[10px] mt-1">{errors.quantity.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Unit</label>
-                  <input
-                    type="text"
-                    {...register('unit')}
-                    placeholder="e.g. Bags"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.unit
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.unit && <p className="text-rose-400 text-[10px] mt-1">{errors.unit.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Unit Price ($)</label>
-                  <input
-                    type="text"
-                    {...register('unitPrice')}
-                    placeholder="e.g. 8.50"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.unitPrice
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.unitPrice && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.unitPrice.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Supplier</label>
-                  <select
-                    {...register('supplierId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
-                  >
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
-                  <select
-                    {...register('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
-                  >
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.code} - {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Purchase Date</label>
-                  <input
-                    type="date"
-                    {...register('purchaseDate')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.purchaseDate
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.purchaseDate && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.purchaseDate.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Invoice / Challan #</label>
-                  <input
-                    type="text"
-                    {...register('invoiceNumber')}
-                    placeholder="e.g. INV-9283"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.invoiceNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.invoiceNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.invoiceNumber.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer animate-in duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {isCreating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Save Record</span>
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Category</label>
+              <select
+                {...register('category')}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all"
+              >
+                <option value="Cement">Cement</option>
+                <option value="Steel &amp; Rebar">Steel &amp; Rebar</option>
+                <option value="Bricks &amp; Blocks">Bricks &amp; Blocks</option>
+                <option value="Sand &amp; Aggregates">Sand &amp; Aggregates</option>
+                <option value="Pipes &amp; Plumbing">Pipes &amp; Plumbing</option>
+                <option value="Electricals">Electricals</option>
+                <option value="Wood &amp; Timber">Wood &amp; Timber</option>
+                <option value="Chemicals &amp; Paint">Chemicals &amp; Paint</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Quantity</label>
+              <input
+                type="text"
+                {...register('quantity')}
+                placeholder="e.g. 500"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  errors.quantity
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
+              />
+              {errors.quantity && <p className="text-rose-400 text-[10px] mt-1">{errors.quantity.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Unit</label>
+              <input
+                type="text"
+                {...register('unit')}
+                placeholder="e.g. Bags"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  errors.unit
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
+              />
+              {errors.unit && <p className="text-rose-400 text-[10px] mt-1">{errors.unit.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Unit Price ($)</label>
+              <input
+                type="text"
+                {...register('unitPrice')}
+                placeholder="e.g. 8.50"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  errors.unitPrice
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
+              />
+              {errors.unitPrice && (
+                <p className="text-rose-400 text-[10px] mt-1">{errors.unitPrice.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Supplier</label>
+              <select
+                {...register('supplierId')}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+              >
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
+              <select
+                {...register('projectId')}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} - {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Purchase Date</label>
+              <Controller
+                name="purchaseDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePickerInput
+                    id="purchaseDate"
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={!!errors.purchaseDate}
+                  />
+                )}
+              />
+              {errors.purchaseDate && (
+                <p className="text-rose-400 text-[10px] mt-1">{errors.purchaseDate.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Invoice / Challan #</label>
+              <input
+                type="text"
+                {...register('invoiceNumber')}
+                placeholder="e.g. INV-9283"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  errors.invoiceNumber
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
+              />
+              {errors.invoiceNumber && (
+                <p className="text-rose-400 text-[10px] mt-1">{errors.invoiceNumber.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-4 flex justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer animate-in duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isCreating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>Save Record</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Record?"
+        description="Delete this purchase record? The associated expense transaction logged under the project accounts will also be deleted."
+        confirmText="Delete"
+        isConfirming={false}
+      />
     </div>
   );
 }

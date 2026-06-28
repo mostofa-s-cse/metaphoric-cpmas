@@ -4,8 +4,9 @@
  * CPMAS — Document Repository
  * Powered by RTK Query, React Hook Form, and Zod validation.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -55,6 +56,10 @@ export default function DocumentsPage() {
   const projects = prjData?.projects || [];
   const suppliers = supData?.suppliers || [];
   const contractors = ctrData?.contractors || [];
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -152,6 +157,10 @@ export default function DocumentsPage() {
     return matchesSearch && matchesCategory;
   });
 
+  useEffect(() => { setPage(1); }, [searchTerm, categoryFilter]);
+
+  const paginatedDocuments = filteredDocuments.slice((page - 1) * limit, page * limit);
+
   const isFetching = isFetchingDocs;
 
   return (
@@ -230,13 +239,14 @@ export default function DocumentsPage() {
           </p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocuments.map((doc) => (
+          {paginatedDocuments.map((doc) => (
             <div
               key={doc.id}
               className="bg-slate-900/25 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700/80 transition-all flex items-start gap-4 hover:shadow-xl group backdrop-blur-md"
             >
-              <div className="p-3 bg-slate-950/60 border border-slate-850 rounded-xl shrink-0">
+              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl shrink-0">
                 {getFileIcon(doc.fileType)}
               </div>
               <div className="min-w-0 flex-1 flex flex-col justify-between h-full">
@@ -306,6 +316,15 @@ export default function DocumentsPage() {
             </div>
           ))}
         </div>
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(filteredDocuments.length / limit)}
+          totalItems={filteredDocuments.length}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
+        </>
       )}
 
       {/* Upload Modal */}
@@ -336,7 +355,7 @@ export default function DocumentsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.name
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
@@ -346,7 +365,7 @@ export default function DocumentsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">File Type</label>
                   <select
                     {...register('fileType')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="PDF">PDF</option>
                     <option value="EXCEL">EXCEL</option>
@@ -361,7 +380,7 @@ export default function DocumentsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Document Category</label>
                   <select
                     {...register('category')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="CONTRACT">Contract / Deed</option>
                     <option value="INVOICE">Expense Invoice / Bill</option>
@@ -375,7 +394,7 @@ export default function DocumentsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Project</label>
                   <select
                     {...register('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="">General Corporate (No Project)</option>
                     {projects.map((p) => (
@@ -392,7 +411,7 @@ export default function DocumentsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Supplier</label>
                   <select
                     {...register('supplierId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="">No Supplier Link</option>
                     {suppliers.map((s) => (
@@ -407,7 +426,7 @@ export default function DocumentsPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Contractor</label>
                   <select
                     {...register('contractorId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="">No Contractor Link</option>
                     {contractors.map((c) => (
@@ -428,7 +447,7 @@ export default function DocumentsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.description
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.description && <p className="text-rose-400 text-[10px] mt-1">{errors.description.message}</p>}

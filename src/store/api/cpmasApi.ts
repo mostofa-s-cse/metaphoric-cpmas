@@ -3,7 +3,7 @@
  * All API endpoints with caching, invalidation, and tag management.
  * Split into domain-specific endpoint builders for scalability.
  */
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi, fetchBaseQuery, retry } from '@reduxjs/toolkit/query/react';
 
 // ─── Type Definitions ─────────────────────────────────────────────────────────
 
@@ -165,10 +165,20 @@ export interface ApiDocument {
 
 // ─── Base Query ───────────────────────────────────────────────────────────────
 
-const baseQuery = fetchBaseQuery({
-  baseUrl: '/api',
-  credentials: 'include', // send cookies automatically (JWT)
-});
+const baseQuery = retry(
+  fetchBaseQuery({
+    baseUrl: '/api',
+    credentials: 'include', // send cookies automatically (JWT)
+    prepareHeaders: (headers) => {
+      // Disable caching on client-side fetch requests
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      headers.set('Pragma', 'no-cache');
+      headers.set('Expires', '0');
+      return headers;
+    },
+  }),
+  { maxRetries: 0 }
+);
 
 // ─── Cache Tags ───────────────────────────────────────────────────────────────
 

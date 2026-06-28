@@ -5,7 +5,11 @@
  * Powered by RTK Query, React Hook Form, and Zod validation.
  */
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import { DatePickerInput } from '@/components/ui/DatePickerInput';
+import { Modal } from '@/components/ui/Modal';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -76,6 +80,12 @@ export default function EmployeesPage() {
   const [searchEmployee, setSearchEmployee] = useState('');
   const [searchLabour, setSearchLabour] = useState('');
 
+  // Pagination state
+  const [empPage, setEmpPage] = useState(1);
+  const [empLimit, setEmpLimit] = useState(10);
+  const [labPage, setLabPage] = useState(1);
+  const [labLimit, setLabLimit] = useState(10);
+
   // Attendance logging states
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'>>({});
@@ -95,6 +105,10 @@ export default function EmployeesPage() {
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<ApiEmployee | null>(null);
 
+  // Delete state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [personToDelete, setPersonToDelete] = useState<{ id: string; type: 'employee' | 'labour' } | null>(null);
+
   // Salary disbursement manual form state
   const [salaryFormData, setSalaryFormData] = useState({
     month: new Date().toISOString().slice(0, 7), // YYYY-MM
@@ -112,6 +126,7 @@ export default function EmployeesPage() {
     register: registerEmployee,
     handleSubmit: handleSubmitEmployee,
     reset: resetEmployee,
+    control: controlEmployee,
     formState: { errors: employeeErrors },
   } = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -225,23 +240,25 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleDeleteEmployee = async (id: string) => {
-    if (!window.confirm('Delete this employee record?')) return;
-    try {
-      await deleteEmployee(id).unwrap();
-      showSuccessToast('Employee record deleted');
-    } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete employee');
-    }
+  const handleDeleteClick = (id: string, type: 'employee' | 'labour') => {
+    setPersonToDelete({ id, type });
+    setDeleteConfirmOpen(true);
   };
 
-  const handleDeleteLabour = async (id: string) => {
-    if (!window.confirm('Delete this worker record? All attendance history will be deleted.')) return;
+  const confirmDelete = async () => {
+    if (!personToDelete) return;
     try {
-      await deleteLabour(id).unwrap();
-      showSuccessToast('Worker record deleted');
+      if (personToDelete.type === 'employee') {
+        await deleteEmployee(personToDelete.id).unwrap();
+        showSuccessToast('Employee record deleted');
+      } else {
+        await deleteLabour(personToDelete.id).unwrap();
+        showSuccessToast('Worker record deleted');
+      }
+      setDeleteConfirmOpen(false);
+      setPersonToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete worker');
+      showErrorToast(err?.data?.error || 'Failed to delete record');
     }
   };
 
@@ -332,6 +349,12 @@ export default function EmployeesPage() {
       lab.name.toLowerCase().includes(searchLabour.toLowerCase()) ||
       lab.trade.toLowerCase().includes(searchLabour.toLowerCase())
   );
+
+  useEffect(() => { setEmpPage(1); }, [searchEmployee]);
+  useEffect(() => { setLabPage(1); }, [searchLabour]);
+
+  const paginatedEmployees = filteredEmployees.slice((empPage - 1) * empLimit, empPage * empLimit);
+  const paginatedLabours = filteredLabours.slice((labPage - 1) * labLimit, labPage * labLimit);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -457,7 +480,7 @@ export default function EmployeesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredEmployees.map((emp) => (
+                    {paginatedEmployees.map((emp) => (
                       <tr key={emp.id} className="hover:bg-slate-800/20 transition-colors">
                         <td className="p-4 font-bold text-cyan-455 font-mono">{emp.employeeId}</td>
                         <td className="p-4 font-semibold text-slate-200">{emp.fullName}</td>
@@ -483,8 +506,8 @@ export default function EmployeesPage() {
                         {user?.role === 'SUPER_ADMIN' && (
                           <td className="p-4 text-right">
                             <button
-                              onClick={() => handleDeleteEmployee(emp.id)}
-                              className="p-1.5 text-slate-500 hover:text-rose-455 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10 rounded-lg transition-all cursor-pointer animate-in duration-200"
+                              onClick={() => handleDeleteClick(emp.id, 'employee')}
+                              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer animate-in duration-200"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -495,6 +518,14 @@ export default function EmployeesPage() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={empPage}
+                totalPages={Math.ceil(filteredEmployees.length / empLimit)}
+                totalItems={filteredEmployees.length}
+                limit={empLimit}
+                onPageChange={setEmpPage}
+                onLimitChange={(l) => { setEmpLimit(l); setEmpPage(1); }}
+              />
             </div>
           )}
         </div>
@@ -544,7 +575,7 @@ export default function EmployeesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredLabours.map((lab) => (
+                    {paginatedLabours.map((lab) => (
                       <tr key={lab.id} className="hover:bg-slate-800/20 transition-colors">
                         <td className="p-4 font-semibold text-slate-200">{lab.name}</td>
                         <td className="p-4">
@@ -572,8 +603,8 @@ export default function EmployeesPage() {
                         {user?.role === 'SUPER_ADMIN' && (
                           <td className="p-4 text-right">
                             <button
-                              onClick={() => handleDeleteLabour(lab.id)}
-                              className="p-1.5 text-slate-500 hover:text-rose-455 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10 rounded-lg transition-all cursor-pointer animate-in duration-200"
+                              onClick={() => handleDeleteClick(lab.id, 'labour')}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer animate-in duration-200"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -584,6 +615,14 @@ export default function EmployeesPage() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={labPage}
+                totalPages={Math.ceil(filteredLabours.length / labLimit)}
+                totalItems={filteredLabours.length}
+                limit={labLimit}
+                onPageChange={setLabPage}
+                onLimitChange={(l) => { setLabLimit(l); setLabPage(1); }}
+              />
             </div>
           )}
         </div>
@@ -602,11 +641,10 @@ export default function EmployeesPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                type="date"
+              <DatePickerInput
+                id="attendanceDate"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-cyan-500"
+                onChange={setSelectedDate}
               />
               {user && user.role !== 'DATA_ENTRY_OPERATOR' && (
                 <button
@@ -705,23 +743,18 @@ export default function EmployeesPage() {
       )}
 
       {/* Modal 1: Register Employee */}
-      {isEmployeeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <Building className="h-4.5 w-4.5 text-cyan-400" />
-                Register Staff Employee
-              </h2>
-              <button
-                onClick={() => setIsEmployeeModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitEmployee(onEmployeeSubmit)} className="space-y-4">
+      <Modal
+        open={isEmployeeModalOpen}
+        onClose={() => setIsEmployeeModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <Building className="h-4.5 w-4.5 text-cyan-400" />
+            Register Staff Employee
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmitEmployee(onEmployeeSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Employee ID</label>
@@ -732,7 +765,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       employeeErrors.employeeId
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {employeeErrors.employeeId && (
@@ -749,7 +782,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       employeeErrors.fullName
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {employeeErrors.fullName && (
@@ -768,7 +801,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       employeeErrors.designation
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {employeeErrors.designation && (
@@ -780,7 +813,7 @@ export default function EmployeesPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Department</label>
                   <select
                     {...registerEmployee('department')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="Engineering">Engineering</option>
                     <option value="Accounts &amp; Finance">Accounts &amp; Finance</option>
@@ -801,7 +834,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       employeeErrors.phoneNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {employeeErrors.phoneNumber && (
@@ -818,7 +851,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       employeeErrors.email
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {employeeErrors.email && (
@@ -830,14 +863,17 @@ export default function EmployeesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Joining Date</label>
-                  <input
-                    type="date"
-                    {...registerEmployee('joiningDate')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.joiningDate
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                  <Controller
+                    name="joiningDate"
+                    control={controlEmployee}
+                    render={({ field }) => (
+                      <DatePickerInput
+                        id="joiningDate"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={!!employeeErrors.joiningDate}
+                      />
+                    )}
                   />
                   {employeeErrors.joiningDate && (
                     <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.joiningDate.message}</p>
@@ -853,7 +889,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       employeeErrors.monthlySalary
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {employeeErrors.monthlySalary && (
@@ -880,28 +916,21 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Modal 2: Register Labour */}
-      {isLabourModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <NotebookTabs className="h-4.5 w-4.5 text-cyan-400" />
-                Register Site Labour Worker
-              </h2>
-              <button
-                onClick={() => setIsLabourModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitLabour(onLabourSubmit)} className="space-y-4">
+      <Modal
+        open={isLabourModalOpen}
+        onClose={() => setIsLabourModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <NotebookTabs className="h-4.5 w-4.5 text-cyan-400" />
+            Register Site Labour Worker
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmitLabour(onLabourSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Worker Name</label>
@@ -912,7 +941,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       labourErrors.name
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {labourErrors.name && <p className="text-rose-400 text-[10px] mt-1">{labourErrors.name.message}</p>}
@@ -927,7 +956,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       labourErrors.phoneNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {labourErrors.phoneNumber && (
@@ -941,7 +970,7 @@ export default function EmployeesPage() {
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Trade Craft</label>
                   <select
                     {...registerLabour('trade')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="Mason">Mason</option>
                     <option value="Carpenter">Carpenter</option>
@@ -962,7 +991,7 @@ export default function EmployeesPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       labourErrors.dailyWage
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {labourErrors.dailyWage && (
@@ -975,7 +1004,7 @@ export default function EmployeesPage() {
                 <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
                 <select
                   {...registerLabour('projectId')}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                 >
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -1003,28 +1032,22 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {/* Modal 3: Disburse Salary */}
-      {isSalaryModalOpen && selectedEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <DollarSign className="h-4.5 w-4.5 text-cyan-400" />
-                Pay Monthly Salary
-              </h2>
-              <button
-                onClick={() => setIsSalaryModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      {/* Modal 3: Disburse Salary (Employee or Labour) */}
+      {selectedEmployee && (
+        <Modal
+          open={isSalaryModalOpen}
+          onClose={() => setIsSalaryModalOpen(false)}
+          title={
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4.5 w-4.5 text-emerald-400" />
+              Disburse Salary / Wages
             </div>
-
-            <form onSubmit={handleDisburseSalarySubmit} className="space-y-4">
+          }
+          size="md"
+        >
+          <form onSubmit={handleDisburseSalarySubmit} className="space-y-4">
               <div className="p-3 border border-slate-800 rounded-xl bg-slate-950/40 text-xs space-y-1">
                 <p>
                   <span className="font-bold text-slate-400">Employee:</span> {selectedEmployee.fullName}
@@ -1046,7 +1069,7 @@ export default function EmployeesPage() {
                     required
                     value={salaryFormData.month}
                     onChange={(e) => setSalaryFormData({ ...salaryFormData, month: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
 
@@ -1071,7 +1094,7 @@ export default function EmployeesPage() {
                         ).toString(),
                       });
                     }}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
               </div>
@@ -1097,7 +1120,7 @@ export default function EmployeesPage() {
                         ).toString(),
                       });
                     }}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
 
@@ -1121,7 +1144,7 @@ export default function EmployeesPage() {
                         ).toString(),
                       });
                     }}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
               </div>
@@ -1135,7 +1158,7 @@ export default function EmployeesPage() {
                     required
                     value={salaryFormData.paidAmount}
                     onChange={(e) => setSalaryFormData({ ...salaryFormData, paidAmount: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs font-bold text-cyan-400"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs font-bold text-cyan-400"
                   />
                 </div>
 
@@ -1144,7 +1167,7 @@ export default function EmployeesPage() {
                   <select
                     value={salaryFormData.paymentMethod}
                     onChange={(e) => setSalaryFormData({ ...salaryFormData, paymentMethod: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs transition-all cursor-pointer"
                   >
                     <option value="CASH">CASH</option>
                     <option value="BANK">BANK TRANSFER</option>
@@ -1161,7 +1184,7 @@ export default function EmployeesPage() {
                   value={salaryFormData.referenceNumber}
                   onChange={(e) => setSalaryFormData({ ...salaryFormData, referenceNumber: e.target.value })}
                   placeholder="e.g. TXN-10294"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                 />
               </div>
 
@@ -1172,7 +1195,7 @@ export default function EmployeesPage() {
                   value={salaryFormData.notes}
                   onChange={(e) => setSalaryFormData({ ...salaryFormData, notes: e.target.value })}
                   placeholder="Add payroll transaction details..."
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-xl text-slate-250 focus:outline-none text-xs"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                 />
               </div>
 
@@ -1194,9 +1217,18 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Record?"
+        description="Are you sure you want to delete this record? This action cannot be undone."
+        confirmText="Delete"
+      />
     </div>
   );
 }

@@ -1,23 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { getPaginationParams, formatPaginatedResponse } from '@/lib/pagination';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const suppliers = await prisma.supplier.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        materials: true,
-        cashOuts: true,
-      },
-    });
+    const { page, limit, skip, take } = getPaginationParams(request);
 
-    return NextResponse.json({ suppliers });
+    const [suppliers, total] = await Promise.all([
+      prisma.supplier.findMany({
+        orderBy: { name: 'asc' },
+        skip,
+        take,
+        include: { materials: true, cashOuts: true },
+      }),
+      prisma.supplier.count(),
+    ]);
+
+    return NextResponse.json(formatPaginatedResponse('suppliers', suppliers, total, page, limit));
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch suppliers' }, { status: 500 });
@@ -46,23 +51,15 @@ export async function POST(request: Request) {
 
     const supplier = await prisma.supplier.create({
       data: {
-        name,
-        companyName,
-        phoneNumber,
-        email,
-        address,
+        name, companyName, phoneNumber, email, address,
         openingBalance: oBalance,
-        currentDue: oBalance, // Initial due starts as opening balance
+        currentDue: oBalance,
         notes,
       },
     });
 
     await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'CREATE_SUPPLIER',
-        details: `Created supplier: ${supplier.name}`,
-      },
+      data: { userId: user.id, action: 'CREATE_SUPPLIER', details: `Created supplier: ${supplier.name}` },
     });
 
     return NextResponse.json({ supplier });

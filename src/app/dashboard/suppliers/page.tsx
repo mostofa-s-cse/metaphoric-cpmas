@@ -6,6 +6,11 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { DatePickerInput } from '@/components/ui/DatePickerInput';
+import { Modal } from '@/components/ui/Modal';
+import { Drawer } from '@/components/ui/Drawer';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -47,14 +52,21 @@ export default function SuppliersPage() {
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   // Form modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
 
-  // History slide-over drawer state
   const [selectedSupplier, setSelectedSupplier] = useState<ApiSupplier | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
 
   // React Hook Form setup
   const {
@@ -118,22 +130,22 @@ export default function SuppliersPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (
-      !window.confirm(
-        'Delete this supplier? All linked historical invoices and purchases will no longer reference this supplier.'
-      )
-    ) {
-      return;
-    }
+    setSupplierToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!supplierToDelete) return;
     try {
-      await deleteSupplier(id).unwrap();
+      await deleteSupplier(supplierToDelete).unwrap();
       showSuccessToast('Supplier deleted successfully');
-      if (selectedSupplier?.id === id) {
+      if (selectedSupplier?.id === supplierToDelete) {
         setIsHistoryOpen(false);
       }
+      setDeleteConfirmOpen(false);
+      setSupplierToDelete(null);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete supplier');
     }
@@ -168,6 +180,10 @@ export default function SuppliersPage() {
       sup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (sup.companyName && sup.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  useEffect(() => { setPage(1); }, [searchTerm]);
+
+  const paginatedSuppliers = filteredSuppliers.slice((page - 1) * limit, page * limit);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -235,8 +251,9 @@ export default function SuppliersPage() {
           </p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSuppliers.map((sup) => (
+          {paginatedSuppliers.map((sup) => (
             <div
               key={sup.id}
               onClick={() => handleViewHistory(sup)}
@@ -300,8 +317,8 @@ export default function SuppliersPage() {
                   </button>
                   {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
                     <button
-                      onClick={(e) => handleDelete(sup.id, e)}
-                      className="p-2 text-slate-450 hover:text-rose-455 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                      onClick={(e) => handleDeleteClick(sup.id, e)}
+                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
                       title="Delete supplier"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -312,6 +329,15 @@ export default function SuppliersPage() {
             </div>
           ))}
         </div>
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(filteredSuppliers.length / limit)}
+          totalItems={filteredSuppliers.length}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
+        </>
       )}
 
       {/* History Drawer */}
@@ -351,7 +377,7 @@ export default function SuppliersPage() {
                     {selectedSupplier.materials.map((m: any) => (
                       <div
                         key={m.id}
-                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl flex items-center justify-between shadow-sm"
+                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between shadow-sm"
                       >
                         <div>
                           <p className="font-semibold text-slate-200">
@@ -382,7 +408,7 @@ export default function SuppliersPage() {
                     {selectedSupplier.cashOuts.map((co: any) => (
                       <div
                         key={co.id}
-                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl flex items-center justify-between shadow-sm"
+                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between shadow-sm"
                       >
                         <div>
                           <p className="font-semibold text-slate-200">Paid via {co.paymentMethod}</p>
@@ -430,7 +456,7 @@ export default function SuppliersPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.name
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
@@ -445,7 +471,7 @@ export default function SuppliersPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.companyName
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.companyName && (
@@ -464,7 +490,7 @@ export default function SuppliersPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.phoneNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.phoneNumber && (
@@ -481,7 +507,7 @@ export default function SuppliersPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.email
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.email && <p className="text-rose-400 text-[10px] mt-1">{errors.email.message}</p>}
@@ -497,7 +523,7 @@ export default function SuppliersPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.address
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.address && <p className="text-rose-400 text-[10px] mt-1">{errors.address.message}</p>}
@@ -513,7 +539,7 @@ export default function SuppliersPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.openingBalance
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.openingBalance && (
@@ -531,7 +557,7 @@ export default function SuppliersPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.notes
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.notes && <p className="text-rose-400 text-[10px] mt-1">{errors.notes.message}</p>}

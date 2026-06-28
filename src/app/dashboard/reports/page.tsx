@@ -122,19 +122,19 @@ export default async function ReportsPage() {
           Cash Flow Statement Reconciliation
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-xl">
+          <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
             <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Opening Cash Balance</span>
             <span className="text-base font-bold text-slate-250">{formatVal(openingBalance)}</span>
           </div>
-          <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-xl">
+          <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
             <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Total Additions (Cash In)</span>
             <span className="text-base font-bold text-emerald-400">+{formatVal(totalCashIn)}</span>
           </div>
-          <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-xl">
+          <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
             <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Total Reductions (Cash Out)</span>
             <span className="text-base font-bold text-rose-455">-{formatVal(totalCashOut)}</span>
           </div>
-          <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-xl">
+          <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
             <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Closing Cash Balance</span>
             <span className="text-base font-bold text-cyan-400">{formatVal(closingBalance)}</span>
           </div>
@@ -152,17 +152,17 @@ export default async function ReportsPage() {
           
           <div className="space-y-4">
             {/* Revenue Line */}
-            <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-850 rounded-xl">
+            <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
               <span className="font-bold text-xs text-slate-300">TOTAL CASH REVENUE</span>
               <span className="font-bold text-sm text-emerald-400">+{formatVal(totalCashIn)}</span>
             </div>
 
             {/* Expenses List */}
-            <div className="border border-slate-850 rounded-xl overflow-hidden bg-slate-950/20">
-              <div className="p-3 bg-slate-950/40 border-b border-slate-850 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/20">
+              <div className="p-3 bg-slate-950/40 border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                 Operating Cost Centers
               </div>
-              <div className="divide-y divide-slate-850 text-xs">
+              <div className="divide-y divide-slate-800 text-xs">
                 {plCategories.map((cat, i) => (
                   <div key={i} className="flex justify-between items-center p-3 hover:bg-slate-900/10">
                     <span className="text-slate-400">{cat.label}</span>
@@ -173,7 +173,7 @@ export default async function ReportsPage() {
             </div>
 
             {/* Summary Line */}
-            <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-850 rounded-xl border-t-2 border-t-cyan-500/20">
+            <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-800 rounded-xl border-t-2 border-t-cyan-500/20">
               <div>
                 <span className="font-bold text-xs text-slate-250">NET PROFIT / LOSS</span>
                 <p className="text-[9px] text-slate-500 mt-0.5">Calculated: Total collections minus total spending</p>
@@ -196,7 +196,7 @@ export default async function ReportsPage() {
               <p className="text-slate-500 text-xs italic">No projects registered.</p>
             ) : (
               projectReports.map((report) => (
-                <div key={report.id} className="p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl space-y-2 text-xs">
+                <div key={report.id} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2 text-xs">
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{report.code}</span>

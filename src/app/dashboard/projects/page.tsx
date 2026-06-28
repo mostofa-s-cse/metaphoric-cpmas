@@ -5,7 +5,12 @@
  * Powered by RTK Query (caching/fetching), React Hook Form, and Zod validation.
  */
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import { DatePickerInput } from '@/components/ui/DatePickerInput';
+import { Modal } from '@/components/ui/Modal';
+import { Drawer } from '@/components/ui/Drawer';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -55,6 +60,10 @@ export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   // Modal & Edit states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -64,12 +73,17 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<ApiProject | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+
   // React Hook Form setup
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    control,
     formState: { errors },
   } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
@@ -135,22 +149,22 @@ export default function ProjectsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (
-      !window.confirm(
-        'Are you sure you want to delete this project? This will permanently remove all material records, labour assignments, and transactions related to this project.'
-      )
-    ) {
-      return;
-    }
+    setProjectToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
     try {
-      await deleteProject(id).unwrap();
+      await deleteProject(projectToDelete).unwrap();
       showSuccessToast('Project deleted successfully');
-      if (selectedProject?.id === id) {
+      if (selectedProject?.id === projectToDelete) {
         setIsDetailsOpen(false);
       }
+      setDeleteConfirmOpen(false);
+      setProjectToDelete(null);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete project');
     }
@@ -242,6 +256,10 @@ export default function ProjectsPage() {
 
     return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => { setPage(1); }, [searchTerm, statusFilter]);
+
+  const paginatedProjects = filteredProjects.slice((page - 1) * limit, page * limit);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -355,8 +373,8 @@ export default function ProjectsPage() {
                   <th className="py-4.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850 text-xs">
-                {filteredProjects.map((project) => (
+              <tbody className="divide-y divide-slate-800 text-xs">
+                {paginatedProjects.map((project) => (
                   <tr
                     key={project.id}
                     onClick={() => handleProjectClick(project)}
@@ -426,7 +444,7 @@ export default function ProjectsPage() {
                         )}
                         {user?.role === 'SUPER_ADMIN' && (
                           <button
-                            onClick={(e) => handleDelete(project.id, e)}
+                            onClick={(e) => handleDeleteClick(project.id, e)}
                             className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -439,35 +457,27 @@ export default function ProjectsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(filteredProjects.length / limit)}
+            totalItems={filteredProjects.length}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          />
         </div>
       )}
 
       {/* Details Slide-Over Drawer */}
-      {isDetailsOpen && selectedProject && profitability && (
-        <div className="fixed inset-y-0 right-0 z-50 flex max-w-full pl-10">
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsDetailsOpen(false)} />
-          <div className="w-screen max-w-md bg-slate-900 border-l border-slate-800 relative flex flex-col h-full shadow-2xl animate-in slide-in-from-right duration-350">
-            <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950/20">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                  <FolderKanban className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">
-                    {selectedProject.code}
-                  </span>
-                  <h2 className="font-bold text-slate-200 text-sm line-clamp-1">{selectedProject.name}</h2>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsDetailsOpen(false)}
-                className="text-slate-400 hover:text-slate-100 p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {selectedProject && profitability && (
+        <Drawer
+          open={isDetailsOpen}
+          onClose={() => setIsDetailsOpen(false)}
+          title={<span className="line-clamp-1">{selectedProject.name}</span>}
+          description={`Project Code: ${selectedProject.code}`}
+          size="md"
+        >
+          <div className="space-y-6">
               {/* Project Stats Summary Widgets */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
@@ -524,7 +534,7 @@ export default function ProjectsPage() {
               </div>
 
               {/* Detailed Expense Breakdown */}
-              <div className="border border-slate-850 rounded-xl p-4 bg-slate-950/30">
+              <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/30">
                 <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">
                   Expense Cost Center breakdown
                 </h3>
@@ -625,28 +635,22 @@ export default function ProjectsPage() {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+        </Drawer>
       )}
 
-      {/* CRUD Add/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <FolderKanban className="h-4.5 w-4.5 text-cyan-400" />
-                {modalMode === 'create' ? 'Create Construction Project' : 'Edit Project Details'}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Create/Edit Modal */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <FolderKanban className="h-4.5 w-4.5 text-cyan-400" />
+            {modalMode === 'create' ? 'Create Construction Project' : 'Edit Project Details'}
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Project Name</label>
@@ -657,7 +661,7 @@ export default function ProjectsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.name
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
@@ -673,7 +677,7 @@ export default function ProjectsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all disabled:opacity-50 ${
                       errors.code
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.code && <p className="text-rose-400 text-[10px] mt-1">{errors.code.message}</p>}
@@ -690,7 +694,7 @@ export default function ProjectsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.clientName
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.clientName && (
@@ -707,7 +711,7 @@ export default function ProjectsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.clientContactNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.clientContactNumber && (
@@ -725,7 +729,7 @@ export default function ProjectsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.projectLocation
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.projectLocation && (
@@ -736,28 +740,34 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    {...register('startDate')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.startDate
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                  <Controller
+                    name="startDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePickerInput
+                        id="startDate"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={!!errors.startDate}
+                      />
+                    )}
                   />
                   {errors.startDate && <p className="text-rose-400 text-[10px] mt-1">{errors.startDate.message}</p>}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Completion Date</label>
-                  <input
-                    type="date"
-                    {...register('expectedCompletionDate')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.expectedCompletionDate
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                  <Controller
+                    name="expectedCompletionDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePickerInput
+                        id="expectedCompletionDate"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={!!errors.expectedCompletionDate}
+                      />
+                    )}
                   />
                   {errors.expectedCompletionDate && (
                     <p className="text-rose-400 text-[10px] mt-1">{errors.expectedCompletionDate.message}</p>
@@ -773,7 +783,7 @@ export default function ProjectsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.estimatedBudget
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.estimatedBudget && (
@@ -789,7 +799,7 @@ export default function ProjectsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.status
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 >
                   <option value="PLANNING">PLANNING</option>
@@ -809,7 +819,7 @@ export default function ProjectsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.description
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-850 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.description && <p className="text-rose-400 text-[10px] mt-1">{errors.description.message}</p>}
@@ -833,9 +843,18 @@ export default function ProjectsPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Project?"
+        description="Are you sure you want to delete this project? This will permanently remove all material records, labour assignments, and transactions related to this project."
+        confirmText="Delete Project"
+        isConfirming={isDeleting}
+      />
     </div>
   );
 }

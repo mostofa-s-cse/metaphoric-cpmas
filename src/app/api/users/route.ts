@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, signJWT } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { getPaginationParams, formatPaginatedResponse } from '@/lib/pagination';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -15,19 +16,26 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    const { page, limit, skip, take } = getPaginationParams(request);
 
-    return NextResponse.json({ users });
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.user.count(),
+    ]);
+
+    return NextResponse.json(formatPaginatedResponse('users', users, total, page, limit));
   } catch (error: any) {
     console.error('Users fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
@@ -71,22 +79,10 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const newUser = await prisma.user.create({
-      data: {
-        email,
-        fullName,
-        passwordHash,
-        role,
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        createdAt: true,
-      },
+      data: { email, fullName, passwordHash, role },
+      select: { id: true, email: true, fullName: true, role: true, createdAt: true },
     });
 
-    // Audit log
     await prisma.auditLog.create({
       data: {
         userId: currentUser.id,

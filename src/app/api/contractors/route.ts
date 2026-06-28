@@ -1,22 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { getPaginationParams, formatPaginatedResponse } from '@/lib/pagination';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const contractors = await prisma.contractor.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        cashOuts: true,
-      },
-    });
+    const { page, limit, skip, take } = getPaginationParams(request);
 
-    return NextResponse.json({ contractors });
+    const [contractors, total] = await Promise.all([
+      prisma.contractor.findMany({
+        orderBy: { name: 'asc' },
+        skip,
+        take,
+        include: { cashOuts: true },
+      }),
+      prisma.contractor.count(),
+    ]);
+
+    return NextResponse.json(formatPaginatedResponse('contractors', contractors, total, page, limit));
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch contractors' }, { status: 500 });
@@ -47,25 +53,11 @@ export async function POST(request: Request) {
     const dAmt = cAmt - pAmt;
 
     const contractor = await prisma.contractor.create({
-      data: {
-        name,
-        companyName,
-        contactNumber,
-        address,
-        workType,
-        contractAmount: cAmt,
-        paidAmount: pAmt,
-        dueAmount: dAmt,
-        notes,
-      },
+      data: { name, companyName, contactNumber, address, workType, contractAmount: cAmt, paidAmount: pAmt, dueAmount: dAmt, notes },
     });
 
     await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'CREATE_CONTRACTOR',
-        details: `Registered contractor: ${contractor.name} (${contractor.workType})`,
-      },
+      data: { userId: user.id, action: 'CREATE_CONTRACTOR', details: `Registered contractor: ${contractor.name} (${contractor.workType})` },
     });
 
     return NextResponse.json({ contractor });

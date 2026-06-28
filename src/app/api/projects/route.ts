@@ -1,24 +1,32 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { getPaginationParams, formatPaginatedResponse } from '@/lib/pagination';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const projects = await prisma.project.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        materials: true,
-        cashOuts: true,
-        labours: true,
-      },
-    });
+    const { page, limit, skip, take } = getPaginationParams(request);
 
-    return NextResponse.json({ projects });
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          materials: true,
+          cashOuts: true,
+          labours: true,
+        },
+      }),
+      prisma.project.count(),
+    ]);
+
+    return NextResponse.json(formatPaginatedResponse('projects', projects, total, page, limit));
   } catch (error: any) {
     console.error('Projects fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -39,37 +47,22 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const {
-      name,
-      code,
-      clientName,
-      clientContactNumber,
-      projectLocation,
-      startDate,
-      expectedCompletionDate,
-      estimatedBudget,
-      status,
-      description,
+      name, code, clientName, clientContactNumber, projectLocation,
+      startDate, expectedCompletionDate, estimatedBudget, status, description,
     } = body;
 
     if (!name || !code || !clientName || !clientContactNumber || !projectLocation || !startDate || !expectedCompletionDate || !estimatedBudget) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const existingProject = await prisma.project.findUnique({
-      where: { code },
-    });
-
+    const existingProject = await prisma.project.findUnique({ where: { code } });
     if (existingProject) {
       return NextResponse.json({ error: 'Project code must be unique' }, { status: 400 });
     }
 
     const project = await prisma.project.create({
       data: {
-        name,
-        code,
-        clientName,
-        clientContactNumber,
-        projectLocation,
+        name, code, clientName, clientContactNumber, projectLocation,
         startDate: new Date(startDate),
         expectedCompletionDate: new Date(expectedCompletionDate),
         estimatedBudget: parseFloat(estimatedBudget),
@@ -78,7 +71,6 @@ export async function POST(request: Request) {
       },
     });
 
-    // Audit Log
     await prisma.auditLog.create({
       data: {
         userId: user.id,

@@ -284,7 +284,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Notifications Dropdown Panel */}
             {notificationsOpen && (
               <div className="absolute right-0 top-12 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 z-50">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-850 pb-2">
+                <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
                   <span className="text-xs font-bold text-slate-300">Live Due & Stock Alerts</span>
                   <button onClick={() => setNotifications([])} className="text-[10px] text-slate-500 hover:text-slate-300">Clear all</button>
                 </div>

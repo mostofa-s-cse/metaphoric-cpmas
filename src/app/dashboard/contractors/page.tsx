@@ -5,7 +5,12 @@
  * Powered by RTK Query, React Hook Form, and Zod schema validation.
  */
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import { DatePickerInput } from '@/components/ui/DatePickerInput';
+import { Modal } from '@/components/ui/Modal';
+import { Drawer } from '@/components/ui/Drawer';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -48,6 +53,10 @@ export default function ContractorsPage() {
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   // Form modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -56,6 +65,10 @@ export default function ContractorsPage() {
   // History slide-over drawer state
   const [selectedContractor, setSelectedContractor] = useState<ApiContractor | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [contractorToDelete, setContractorToDelete] = useState<string | null>(null);
 
   // React Hook Form setup
   const {
@@ -121,22 +134,22 @@ export default function ContractorsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (
-      !window.confirm(
-        'Delete this contractor assignment? All associated transaction histories will no longer point to this contractor.'
-      )
-    ) {
-      return;
-    }
+    setContractorToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!contractorToDelete) return;
     try {
-      await deleteContractor(id).unwrap();
+      await deleteContractor(contractorToDelete).unwrap();
       showSuccessToast('Contractor deleted successfully');
-      if (selectedContractor?.id === id) {
+      if (selectedContractor?.id === contractorToDelete) {
         setIsHistoryOpen(false);
       }
+      setDeleteConfirmOpen(false);
+      setContractorToDelete(null);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete contractor');
     }
@@ -173,6 +186,10 @@ export default function ContractorsPage() {
       ctr.workType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (ctr.companyName && ctr.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  useEffect(() => { setPage(1); }, [searchTerm]);
+
+  const paginatedContractors = filteredContractors.slice((page - 1) * limit, page * limit);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -244,8 +261,9 @@ export default function ContractorsPage() {
           </p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredContractors.map((ctr) => (
+          {paginatedContractors.map((ctr) => (
             <div
               key={ctr.id}
               onClick={() => handleViewHistory(ctr)}
@@ -282,19 +300,19 @@ export default function ContractorsPage() {
                 )}
 
                 <div className="grid grid-cols-3 gap-2 border-t border-slate-800/40 pt-3 text-center text-[10px] font-medium">
-                  <div className="p-1.5 bg-slate-950/30 border border-slate-850 rounded-xl">
+                  <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
                     <span className="text-slate-550 block">Contract</span>
                     <span className="text-slate-200 font-bold block mt-0.5">
                       {formatCurrency(ctr.contractAmount)}
                     </span>
                   </div>
-                  <div className="p-1.5 bg-slate-950/30 border border-slate-850 rounded-xl">
+                  <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
                     <span className="text-slate-550 block">Paid</span>
                     <span className="text-emerald-400 font-bold block mt-0.5">
                       {formatCurrency(ctr.paidAmount)}
                     </span>
                   </div>
-                  <div className="p-1.5 bg-slate-950/30 border border-slate-850 rounded-xl">
+                  <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
                     <span className="text-slate-550 block">Outstanding</span>
                     <span
                       className={`font-bold block mt-0.5 ${
@@ -318,8 +336,8 @@ export default function ContractorsPage() {
                   </button>
                   {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
                     <button
-                      onClick={(e) => handleDelete(ctr.id, e)}
-                      className="p-2 text-slate-450 hover:text-rose-455 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                      onClick={(e) => handleDeleteClick(ctr.id, e)}
+                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
                       title="Delete contractor"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -330,32 +348,35 @@ export default function ContractorsPage() {
             </div>
           ))}
         </div>
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(filteredContractors.length / limit)}
+          totalItems={filteredContractors.length}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
+        </>
       )}
 
       {/* History Drawer */}
-      {isHistoryOpen && selectedContractor && (
-        <div className="fixed inset-y-0 right-0 z-50 flex max-w-full pl-10">
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsHistoryOpen(false)} />
-          <div className="w-screen max-w-xl bg-slate-900 border-l border-slate-800 relative flex flex-col h-full shadow-2xl animate-in slide-in-from-right duration-350">
-            <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950/20 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                  <Briefcase className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-slate-200 text-sm leading-none">{selectedContractor.name}</h2>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-1">Contractor Ledger Log</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsHistoryOpen(false)}
-                className="text-slate-400 hover:text-slate-100 p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      <Drawer
+        open={isHistoryOpen && !!selectedContractor}
+        onClose={() => setIsHistoryOpen(false)}
+        title={
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
+              <Briefcase className="h-5 w-5" />
             </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div>
+              <h2 className="font-bold text-slate-200 text-sm leading-none">{selectedContractor?.name}</h2>
+              <p className="text-[10px] text-slate-500 font-semibold mt-1">Contractor Ledger Log</p>
+            </div>
+          </div>
+        }
+      >
+        {selectedContractor && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Payments History */}
               <div>
                 <h3 className="text-xs font-bold text-slate-350 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2 flex items-center gap-2">
@@ -369,7 +390,7 @@ export default function ContractorsPage() {
                     {selectedContractor.cashOuts.map((co: any) => (
                       <div
                         key={co.id}
-                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl flex items-center justify-between shadow-sm"
+                        className="text-xs p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between shadow-sm"
                       >
                         <div>
                           <p className="font-semibold text-slate-200">Disbursed via {co.paymentMethod}</p>
@@ -405,29 +426,23 @@ export default function ContractorsPage() {
                   </span>
                 </div>
               </div>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Drawer>
 
       {/* CRUD Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <Briefcase className="h-4.5 w-4.5 text-cyan-400" />
-                {modalMode === 'create' ? 'Register Contractor Profile' : 'Edit Contractor Profile'}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-4.5 w-4.5 text-cyan-400" />
+            {modalMode === 'create' ? 'Register Contractor Profile' : 'Edit Contractor Profile'}
+          </div>
+        }
+        size="lg"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Contractor Name</label>
@@ -438,7 +453,7 @@ export default function ContractorsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.name
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
@@ -453,7 +468,7 @@ export default function ContractorsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.companyName
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.companyName && (
@@ -472,7 +487,7 @@ export default function ContractorsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.contactNumber
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.contactNumber && (
@@ -489,7 +504,7 @@ export default function ContractorsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.workType
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.workType && <p className="text-rose-400 text-[10px] mt-1">{errors.workType.message}</p>}
@@ -505,7 +520,7 @@ export default function ContractorsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.address
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.address && <p className="text-rose-400 text-[10px] mt-1">{errors.address.message}</p>}
@@ -521,7 +536,7 @@ export default function ContractorsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.contractAmount
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.contractAmount && (
@@ -538,7 +553,7 @@ export default function ContractorsPage() {
                     className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                       errors.paidAmount
                         ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                     }`}
                   />
                   {errors.paidAmount && (
@@ -556,7 +571,7 @@ export default function ContractorsPage() {
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     errors.notes
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-855 focus:border-cyan-500 focus:ring-cyan-500/30'
+                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
                   }`}
                 />
                 {errors.notes && <p className="text-rose-400 text-[10px] mt-1">{errors.notes.message}</p>}
@@ -579,10 +594,18 @@ export default function ContractorsPage() {
                   <span>{modalMode === 'create' ? 'Register' : 'Save Changes'}</span>
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Contractor?"
+        description="Are you sure you want to delete this contractor assignment? All associated transaction histories will no longer point to this contractor."
+        confirmText="Delete"
+      />
     </div>
   );
 }

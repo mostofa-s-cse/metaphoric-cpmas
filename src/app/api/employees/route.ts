@@ -1,22 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { getPaginationParams, formatPaginatedResponse } from '@/lib/pagination';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const employees = await prisma.employee.findMany({
-      orderBy: { employeeId: 'asc' },
-      include: {
-        salaries: true,
-      },
-    });
+    const { page, limit, skip, take } = getPaginationParams(request);
 
-    return NextResponse.json({ employees });
+    const [employees, total] = await Promise.all([
+      prisma.employee.findMany({
+        orderBy: { employeeId: 'asc' },
+        skip,
+        take,
+        include: { salaries: true },
+      }),
+      prisma.employee.count(),
+    ]);
+
+    return NextResponse.json(formatPaginatedResponse('employees', employees, total, page, limit));
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 });
@@ -41,22 +47,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const checkUniqueId = await prisma.employee.findUnique({
-      where: { employeeId },
-    });
-
+    const checkUniqueId = await prisma.employee.findUnique({ where: { employeeId } });
     if (checkUniqueId) {
       return NextResponse.json({ error: 'Employee ID must be unique' }, { status: 400 });
     }
 
     const employee = await prisma.employee.create({
       data: {
-        employeeId,
-        fullName,
-        designation,
-        department,
-        phoneNumber,
-        email,
+        employeeId, fullName, designation, department, phoneNumber, email,
         joiningDate: new Date(joiningDate),
         monthlySalary: parseFloat(monthlySalary),
         employmentStatus: employmentStatus || 'ACTIVE',
@@ -64,11 +62,7 @@ export async function POST(request: Request) {
     });
 
     await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'CREATE_EMPLOYEE',
-        details: `Registered employee: ${employee.fullName} (${employee.employeeId})`,
-      },
+      data: { userId: user.id, action: 'CREATE_EMPLOYEE', details: `Registered employee: ${employee.fullName} (${employee.employeeId})` },
     });
 
     return NextResponse.json({ employee });
