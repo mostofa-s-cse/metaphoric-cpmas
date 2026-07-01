@@ -15,15 +15,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'CPMAS — Construction Project Management & Accounting System',
+  title: 'Metaphoric Architect | Dhaka',
   description:
-    'A centralized platform to manage construction projects, track cash flows, manage suppliers, contractors, and employees, and automate profitability calculations.',
+    'Metaphoric Architect, Dhaka. 15,897 likes · 147 talking about this. Architecture | Design | Planning | Construction | Consulting',
   keywords: [
-    'construction management',
-    'project accounting',
-    'ERP',
-    'cash flow',
-    'profitability',
+    'metaphoric architect',
+    'architecture dhaka',
+    'interior design',
+    'planning',
+    'construction',
+    'consulting'
   ],
 };
 
