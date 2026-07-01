@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
 import { ShieldAlert, HardHat, Eye, EyeOff, Lock, Mail, Loader2, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { loginSchema, LoginFormValues } from '@/lib/schemas';
@@ -78,17 +79,17 @@ export default function LoginPage() {
       <div className="w-full max-w-md z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-8 hover:border-slate-700/60 transition-colors">
           {/* Branding */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="h-14 w-14 bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/30 rounded-2xl flex items-center justify-center text-cyan-400 mb-4 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+          <Link href="/" className="flex flex-col items-center mb-8 group cursor-pointer">
+            <div className="h-14 w-14 bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/30 rounded-2xl flex items-center justify-center text-cyan-400 mb-4 shadow-[0_0_30px_rgba(6,182,212,0.15)] group-hover:scale-105 transition-transform">
               <HardHat className="h-7 w-7" />
             </div>
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight">
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight group-hover:opacity-80 transition-opacity">
               CPMAS Portal
             </h1>
             <p className="text-slate-500 text-xs mt-1.5 text-center font-medium">
               Construction Project Management &amp; Accounting System
             </p>
-          </div>
+          </Link>
 
           {/* Server Error */}
           {serverError && (

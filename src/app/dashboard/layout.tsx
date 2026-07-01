@@ -20,7 +20,8 @@ import {
   User,
   Bell,
   Settings,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -91,6 +92,12 @@ const navItems: NavItem[] = [
     href: '/dashboard/users',
     icon: ShieldCheck,
     roles: ['SUPER_ADMIN', 'ADMIN'],
+  },
+  {
+    name: 'Contacts',
+    href: '/dashboard/contacts',
+    icon: MessageSquare,
+    roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'],
   },
   {
     name: 'Settings',
