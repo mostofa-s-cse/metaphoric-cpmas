@@ -23,6 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         id: true,
         email: true,
         fullName: true,
+        profileImage: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -49,7 +50,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const body = await request.json();
-    const { email, fullName, role, newPassword } = body;
+    const { email, fullName, role, newPassword, profileImage } = body;
 
     // Users can update their own profile (except role); admins can update all
     const isSelf = currentUser.id === id;
@@ -73,6 +74,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     if (fullName) updateData.fullName = fullName;
     if (email) updateData.email = email;
+    if (profileImage !== undefined) updateData.profileImage = profileImage;
     if (isAdmin && role) updateData.role = role;
 
     if (newPassword) {
@@ -89,6 +91,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         id: true,
         email: true,
         fullName: true,
+        profileImage: true,
         role: true,
         createdAt: true,
         updatedAt: true,

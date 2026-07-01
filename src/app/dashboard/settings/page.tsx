@@ -25,6 +25,7 @@ import {
   Bell,
   Info,
   CheckCircle2,
+  Camera,
 } from 'lucide-react';
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
@@ -147,8 +148,38 @@ export default function SettingsPage() {
         <div className="lg:col-span-1 space-y-4">
           {/* Avatar Card */}
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col items-center text-center">
-            <div className="h-20 w-20 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border-2 border-cyan-500/30 rounded-full flex items-center justify-center text-cyan-400 text-2xl font-bold uppercase mb-3">
-              {currentUser?.fullName?.slice(0, 2) || 'U'}
+            <div className="relative group mb-3">
+              <div className="h-20 w-20 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border-2 border-cyan-500/30 rounded-full flex items-center justify-center text-cyan-400 text-2xl font-bold uppercase overflow-hidden">
+                {currentUser?.profileImage ? (
+                  <img src={currentUser.profileImage} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  currentUser?.fullName?.slice(0, 2) || 'U'
+                )}
+              </div>
+              <label className="absolute inset-0 flex items-center justify-center bg-slate-950/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                <Camera className="h-6 w-6 text-slate-200" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !currentUser) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                      const base64String = event.target?.result as string;
+                      try {
+                        await updateUser({ id: currentUser.id, profileImage: base64String }).unwrap();
+                        dispatch(addToast({ message: 'Profile image updated successfully.', variant: 'success' }));
+                      } catch (error) {
+                        dispatch(addToast({ message: 'Failed to update profile image.', variant: 'error' }));
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
             </div>
             <p className="font-bold text-slate-200 text-sm">{currentUser?.fullName}</p>
             <p className="text-slate-500 text-xs mt-0.5">{currentUser?.email}</p>

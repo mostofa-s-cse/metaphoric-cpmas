@@ -63,6 +63,9 @@ export default function DocumentsPage() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [viewDoc, setViewDoc] = useState<ApiDocument | null>(null);
 
   // React Hook Form setup
   const {
@@ -96,15 +99,36 @@ export default function DocumentsPage() {
       contractorId: '',
       description: '',
     });
+    setSelectedFile(null);
     setIsModalOpen(true);
   };
 
   const onSubmit = async (values: DocumentFormValues) => {
+    if (!selectedFile) {
+      showErrorToast('Please select a file to upload');
+      return;
+    }
+
     try {
-      // Set the url dynamically based on name and extension
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload file to server');
+      }
+
+      const uploadData = await uploadRes.json();
+
       const payload = {
         ...values,
-        url: `/uploads/${values.name.toLowerCase().replace(/\s+/g, '_')}.${values.fileType.toLowerCase()}`,
+        url: uploadData.url,
+        fileType: selectedFile.name.split('.').pop()?.toUpperCase() || values.fileType,
         projectId: values.projectId || null,
         supplierId: values.supplierId || null,
         contractorId: values.contractorId || null,
@@ -114,7 +138,9 @@ export default function DocumentsPage() {
       showSuccessToast('Document record uploaded');
       setIsModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to upload document');
+      showErrorToast(err?.message || err?.data?.error || 'Failed to upload document');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -290,17 +316,13 @@ export default function DocumentsPage() {
                 </div>
 
                 <div className="mt-4 pt-3.5 border-t border-slate-800/30 flex items-center justify-between">
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert(`Simulated document viewer opening: ${doc.url}`);
-                    }}
-                    className="inline-flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
+                  <button
+                    onClick={() => setViewDoc(doc)}
+                    className="inline-flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     <span>View File</span>
-                  </a>
+                  </button>
 
                   {user?.role === 'SUPER_ADMIN' && (
                     <button
@@ -368,9 +390,7 @@ export default function DocumentsPage() {
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="PDF">PDF</option>
-                    <option value="EXCEL">EXCEL</option>
                     <option value="IMAGE">IMAGE</option>
-                    <option value="WORD">WORD</option>
                   </select>
                 </div>
               </div>
@@ -439,6 +459,20 @@ export default function DocumentsPage() {
               </div>
 
               <div>
+                <label className="block text-slate-400 text-xs font-semibold mb-2">Upload File (PDF/Image)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/10 file:text-cyan-400 hover:file:bg-cyan-500/20 mb-4"
+                />
+              </div>
+
+              <div>
                 <label className="block text-slate-400 text-xs font-semibold mb-2">Brief Description</label>
                 <textarea
                   rows={2}
@@ -463,14 +497,63 @@ export default function DocumentsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isCreating}
+                  disabled={isCreating || isUploading}
                   className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
                 >
-                  {isCreating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Upload File</span>
+                  {(isCreating || isUploading) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Document Modal */}
+      {viewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] h-[80vh]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800 shrink-0">
+              <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
+                <FileText className="h-4.5 w-4.5 text-cyan-400" />
+                {viewDoc.name}
+              </h2>
+              <button
+                onClick={() => setViewDoc(null)}
+                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto bg-slate-950/50 p-4 flex items-center justify-center">
+              {viewDoc.fileType === 'PDF' ? (
+                <iframe
+                  src={viewDoc.url}
+                  className="w-full h-full rounded-xl border border-slate-800"
+                  title={viewDoc.name}
+                />
+              ) : viewDoc.fileType === 'IMAGE' ? (
+                <img
+                  src={viewDoc.url}
+                  alt={viewDoc.name}
+                  className="max-w-full max-h-full object-contain rounded-xl"
+                />
+              ) : (
+                <div className="text-center">
+                  <FileText className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 text-sm">Preview not available for this file type.</p>
+                  <a
+                    href={viewDoc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-block px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold rounded-lg transition-colors"
+                  >
+                    Download File
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

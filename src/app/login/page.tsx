@@ -22,6 +22,7 @@ export default function LoginPage() {
   const { login, isLoggingIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const {
     register,
@@ -37,7 +38,9 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginFormValues) => {
     setServerError('');
     const result = await login(values.email, values.password);
-    if (!result.success) {
+    if (result.success) {
+      setIsRedirecting(true);
+    } else {
       setServerError(result.error || 'Invalid credentials');
     }
   };
@@ -48,7 +51,7 @@ export default function LoginPage() {
     setServerError('');
   };
 
-  const isBusy = isLoggingIn || isSubmitting;
+  const isBusy = isLoggingIn || isSubmitting || isRedirecting;
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
@@ -56,6 +59,21 @@ export default function LoginPage() {
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/8 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-blue-500/8 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Full-screen Redirecting Loader */}
+      {isRedirecting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative flex items-center justify-center mb-6">
+            <div className="absolute w-24 h-24 border-t-2 border-cyan-400 border-solid rounded-full animate-spin"></div>
+            <div className="absolute w-20 h-20 border-r-2 border-blue-500 border-solid rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            <HardHat className="h-10 w-10 text-cyan-400" />
+          </div>
+          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 animate-pulse tracking-widest">
+            PREPARING WORKSPACE...
+          </h2>
+          <p className="text-slate-400 text-sm mt-2">Loading your dashboard</p>
+        </div>
+      )}
 
       <div className="w-full max-w-md z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-8 hover:border-slate-700/60 transition-colors">
@@ -147,7 +165,7 @@ export default function LoginPage() {
               {isBusy ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Authenticating...</span>
+                  <span>{isRedirecting ? 'Redirecting...' : 'Authenticating...'}</span>
                 </>
               ) : (
                 <>

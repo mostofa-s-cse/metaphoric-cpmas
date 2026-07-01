@@ -38,6 +38,7 @@ model User {
   email        String     @unique
   passwordHash String
   fullName     String
+  profileImage String?    @db.Text
   role         Role       @default(DATA_ENTRY_OPERATOR)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

@@ -18,6 +18,7 @@ export interface ApiUser {
   id: string;
   email: string;
   fullName: string;
+  profileImage?: string;
   role: UserRole;
   createdAt: string;
   updatedAt: string;
@@ -251,7 +252,7 @@ export const cpmasApi = createApi({
 
     updateUser: builder.mutation<
       { user: ApiUser },
-      { id: string; fullName?: string; email?: string; role?: UserRole; newPassword?: string }
+      { id: string; fullName?: string; email?: string; role?: UserRole; newPassword?: string; profileImage?: string }
     >({
       query: ({ id, ...body }) => ({ url: `/users/${id}`, method: 'PUT', body }),
       invalidatesTags: (_result, _err, { id }) => [
