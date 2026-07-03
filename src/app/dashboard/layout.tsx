@@ -43,7 +43,7 @@ const navItems: NavItem[] = [
     name: 'Projects',
     href: '/dashboard/projects',
     icon: FolderKanban,
-    roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'],
+    roles: ['SUPER_ADMIN'],
   },
   {
     name: 'Suppliers',
@@ -85,13 +85,13 @@ const navItems: NavItem[] = [
     name: 'Reports & P&L',
     href: '/dashboard/reports',
     icon: TrendingUp,
-    roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],
+    roles: ['SUPER_ADMIN'],
   },
   {
     name: 'User Management',
     href: '/dashboard/users',
     icon: ShieldCheck,
-    roles: ['SUPER_ADMIN', 'ADMIN'],
+    roles: ['SUPER_ADMIN'],
   },
   {
     name: 'Contacts',

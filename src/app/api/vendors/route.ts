@@ -52,10 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // RBAC: PM, Admin, Super Admin can register vendors
-    if (user.role === 'ACCOUNTANT' || user.role === 'DATA_ENTRY_OPERATOR') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
-    }
+    // Allowed roles can register vendors (checking user exists is sufficient)
 
     const body = await request.json();
     const { name, companyName, contactNumber, address, workType, notes, assignments } = body;

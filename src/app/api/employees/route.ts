@@ -36,9 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN' && user.role !== 'ACCOUNTANT') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
-    }
+    // Allowed roles can register employees (checking user exists is sufficient)
 
     const body = await request.json();
     const { employeeId, fullName, designation, department, phoneNumber, email, joiningDate, monthlySalary, employmentStatus } = body;

@@ -203,12 +203,12 @@ export default function UsersPage() {
 
   // ─── RBAC Guard ────────────────────────────────────────────────────────────
 
-  if (currentUser?.role !== 'SUPER_ADMIN' && currentUser?.role !== 'ADMIN') {
+  if (currentUser?.role !== 'SUPER_ADMIN') {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-slate-500">
         <Lock className="h-10 w-10 text-slate-700 mb-3" />
         <p className="font-semibold text-sm">Access Restricted</p>
-        <p className="text-xs mt-1 text-slate-600">Only Admins can manage system users.</p>
+        <p className="text-xs mt-1 text-slate-600">Only Super Admin can manage system users.</p>
       </div>
     );
   }

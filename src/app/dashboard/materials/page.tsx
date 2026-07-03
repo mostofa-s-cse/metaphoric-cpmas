@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import {
   useGetMaterialsQuery,
-  useGetProjectsQuery,
+  useGetProjectsListQuery,
   useGetSuppliersQuery,
   useCreateMaterialMutation,
   useDeleteMaterialMutation,
@@ -42,7 +42,7 @@ export default function MaterialsPage() {
 
   // Queries & Mutations
   const { data: matData, isLoading: isFetchingMaterials, error: matError, refetch: refetchMaterials } = useGetMaterialsQuery();
-  const { data: prjData, isLoading: isFetchingProjects } = useGetProjectsQuery();
+  const { data: prjData, isLoading: isFetchingProjects } = useGetProjectsListQuery();
   const { data: supData, isLoading: isFetchingSuppliers } = useGetSuppliersQuery();
   const [createMaterial, { isLoading: isCreating }] = useCreateMaterialMutation();
   const [deleteMaterial] = useDeleteMaterialMutation();

@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/useToast';
 import {
   useGetEmployeesQuery,
   useGetLaboursQuery,
-  useGetProjectsQuery,
+  useGetProjectsListQuery,
   useCreateEmployeeMutation,
   useDeleteEmployeeMutation,
   useCreateLabourMutation,
@@ -64,7 +64,7 @@ export default function EmployeesPage() {
   // Queries & Mutations
   const { data: empData, isLoading: isFetchingEmployees, error: empError, refetch: refetchEmployees } = useGetEmployeesQuery();
   const { data: labData, isLoading: isFetchingLabours, error: labError, refetch: refetchLabours } = useGetLaboursQuery();
-  const { data: prjData } = useGetProjectsQuery();
+  const { data: prjData } = useGetProjectsListQuery();
 
   const [createEmployee, { isLoading: isCreatingEmployee }] = useCreateEmployeeMutation();
   const [deleteEmployee] = useDeleteEmployeeMutation();

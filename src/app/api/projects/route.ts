@@ -10,6 +10,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // For non-Super Admins, return a basic list containing only ID, Code, and Name for selection menus
+    if (user.role !== 'SUPER_ADMIN') {
+      const projects = await prisma.project.findMany({
+        orderBy: { code: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      });
+      // Format response to conform to RTK Query paginated shape
+      return NextResponse.json({
+        projects,
+        total: projects.length,
+        page: 1,
+        limit: projects.length,
+      });
+    }
+
+    // Full detailed query for SUPER_ADMIN
     const { page, limit, skip, take } = getPaginationParams(request);
 
     const [projects, total] = await Promise.all([
@@ -41,9 +61,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // RBAC: PM, Admin, Super Admin can create projects
-    if (user.role === 'ACCOUNTANT' || user.role === 'DATA_ENTRY_OPERATOR') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    // Only SUPER_ADMIN can create projects
+    if (user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();

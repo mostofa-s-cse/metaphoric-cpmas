@@ -12,8 +12,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
 
-    // Users can view their own profile; admins can view any
-    if (currentUser.id !== id && currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN') {
+    // Users can view their own profile; super admins can view any
+    if (currentUser.id !== id && currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -52,22 +52,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const { email, fullName, role, newPassword, profileImage } = body;
 
-    // Users can update their own profile (except role); admins can update all
+    // Users can update their own profile (except role); super admins can update all
     const isSelf = currentUser.id === id;
-    const isAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
+    const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
 
-    if (!isSelf && !isAdmin) {
+    if (!isSelf && !isSuperAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Non-admins cannot change role
-    if (!isAdmin && role) {
+    // Non-super-admins cannot change role
+    if (!isSuperAdmin && role) {
       return NextResponse.json({ error: 'Forbidden: Cannot change own role' }, { status: 403 });
-    }
-
-    // Admin cannot elevate someone to SUPER_ADMIN (only SUPER_ADMIN can)
-    if (currentUser.role === 'ADMIN' && role === 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Cannot assign Super Admin role' }, { status: 403 });
     }
 
     const updateData: any = {};
@@ -75,7 +70,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (fullName) updateData.fullName = fullName;
     if (email) updateData.email = email;
     if (profileImage !== undefined) updateData.profileImage = profileImage;
-    if (isAdmin && role) updateData.role = role;
+    if (isSuperAdmin && role) updateData.role = role;
 
     if (newPassword) {
       if (newPassword.length < 6) {

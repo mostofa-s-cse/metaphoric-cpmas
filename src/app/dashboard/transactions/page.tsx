@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/useToast';
 import {
   useGetCashInsQuery,
   useGetCashOutsQuery,
-  useGetProjectsQuery,
+  useGetProjectsListQuery,
   useCreateCashInMutation,
   useCreateCashOutMutation,
   useDeleteCashInMutation,
@@ -61,7 +61,7 @@ export default function TransactionsPage() {
   // Queries & Mutations
   const { data: cashInResponse, isLoading: isFetchingCashIn, error: cashInError, refetch: refetchCashIn } = useGetCashInsQuery();
   const { data: cashOutResponse, isLoading: isFetchingCashOut, error: cashOutError, refetch: refetchCashOut } = useGetCashOutsQuery();
-  const { data: prjData } = useGetProjectsQuery();
+  const { data: prjData } = useGetProjectsListQuery();
 
   const [createCashIn, { isLoading: isCreatingCashIn }] = useCreateCashInMutation();
   const [createCashOut, { isLoading: isCreatingCashOut }] = useCreateCashOutMutation();

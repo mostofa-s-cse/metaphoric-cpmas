@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only Super Admin and Admin can view all users
-    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+    // Only Super Admin can view all users
+    if (user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only Super Admin can create users (Admin can too but not create SUPER_ADMIN)
-    if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN') {
+    // Only Super Admin can create users
+    if (currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
     }
 
@@ -61,10 +61,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Admin cannot create SUPER_ADMIN accounts
-    if (currentUser.role === 'ADMIN' && role === 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Cannot create Super Admin' }, { status: 403 });
-    }
 
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });

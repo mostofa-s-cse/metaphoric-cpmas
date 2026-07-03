@@ -48,6 +48,18 @@ export default function ProjectsPage() {
   const { user } = useAuth();
   const { success: showSuccessToast, error: showErrorToast } = useToast();
 
+  if (!user) return null;
+
+  if (user.role !== 'SUPER_ADMIN') {
+    return (
+      <div className="border border-slate-800 rounded-2xl p-16 text-center text-slate-500">
+        <FolderKanban className="h-10 w-10 mx-auto text-slate-700 mb-3" />
+        <p className="font-semibold text-sm">Forbidden Access</p>
+        <p className="text-xs mt-1 text-slate-600">You do not have permissions to view projects.</p>
+      </div>
+    );
+  }
+
   // Queries & Mutations
   const { data, isLoading: isFetching, error: fetchError, refetch } = useGetProjectsQuery();
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();

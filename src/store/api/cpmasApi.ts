@@ -312,6 +312,17 @@ export const cpmasApi = createApi({
           : [{ type: 'Projects', id: 'LIST' }],
     }),
 
+    getProjectsList: builder.query<{ projects: Pick<ApiProject, 'id' | 'name' | 'code'>[] }, void>({
+      query: () => '/projects/list',
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.projects.map(({ id }) => ({ type: 'Projects' as CacheTag, id })),
+              { type: 'Projects', id: 'LIST' },
+            ]
+          : [{ type: 'Projects', id: 'LIST' }],
+    }),
+
     getProject: builder.query<{ project: ApiProject }, string>({
       query: (id) => `/projects/${id}`,
       providesTags: (_result, _err, id) => [{ type: 'Projects', id }],
@@ -608,6 +619,7 @@ export const {
   useDeleteUserMutation,
   // Projects
   useGetProjectsQuery,
+  useGetProjectsListQuery,
   useGetProjectQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,

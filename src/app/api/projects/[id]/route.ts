@@ -12,6 +12,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Only SUPER_ADMIN can view project details
+    if (user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
+    }
+
     const { id } = await params;
     const project = await prisma.project.findUnique({
       where: { id },
@@ -54,9 +59,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // RBAC: PM, Admin, Super Admin can update projects
-    if (user.role === 'ACCOUNTANT' || user.role === 'DATA_ENTRY_OPERATOR') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    // Only SUPER_ADMIN can update projects
+    if (user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
     }
 
     const { id } = await params;
@@ -134,9 +139,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // RBAC: Only Admin and Super Admin can delete projects
-    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    // Only SUPER_ADMIN can delete projects
+    if (user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
     }
 
     const { id } = await params;

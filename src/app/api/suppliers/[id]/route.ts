@@ -12,9 +12,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role === 'PROJECT_MANAGER') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
-    }
+    // Allowed roles can update suppliers (checking user exists is sufficient)
 
     const { id } = await params;
     const body = await request.json();

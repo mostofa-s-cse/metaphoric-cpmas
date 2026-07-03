@@ -19,7 +19,7 @@ import {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
-  useGetProjectsQuery,
+  useGetProjectsListQuery,
   ApiSupplier,
 } from '@/store/api/cpmasApi';
 import { supplierSchema, SupplierFormValues } from '@/lib/schemas';
@@ -49,7 +49,7 @@ export default function SuppliersPage() {
   const [deleteSupplier, { isLoading: isDeleting }] = useDeleteSupplierMutation();
 
   const suppliers = data?.suppliers || [];
-  const { data: projectsData } = useGetProjectsQuery();
+  const { data: projectsData } = useGetProjectsListQuery();
   const projects = projectsData?.projects || [];
 
   // Search filter state

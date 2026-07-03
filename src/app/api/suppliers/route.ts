@@ -53,9 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role === 'PROJECT_MANAGER') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
-    }
+    // Allowed roles can register suppliers (checking user exists is sufficient)
 
     const body = await request.json();
     const { name, companyName, phoneNumber, email, address, openingBalance, notes, assignments } = body;

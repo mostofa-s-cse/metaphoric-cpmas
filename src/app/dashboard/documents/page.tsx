@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import {
   useGetDocumentsQuery,
-  useGetProjectsQuery,
+  useGetProjectsListQuery,
   useGetSuppliersQuery,
   useGetVendorsQuery,
   useCreateDocumentMutation,
@@ -49,7 +49,7 @@ export default function DocumentsPage() {
 
   // Queries & Mutations
   const { data: docData, isLoading: isFetchingDocs, error: docError, refetch: refetchDocs } = useGetDocumentsQuery();
-  const { data: prjData } = useGetProjectsQuery();
+  const { data: prjData } = useGetProjectsListQuery();
   const { data: supData } = useGetSuppliersQuery();
   const { data: ctrData } = useGetVendorsQuery();
   const [createDocument, { isLoading: isCreating }] = useCreateDocumentMutation();

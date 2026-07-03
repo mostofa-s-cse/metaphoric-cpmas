@@ -306,7 +306,7 @@ export default function ReportsPage() {
 
   if (!user) return null;
 
-  if (!['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'].includes(user.role)) {
+  if (user.role !== 'SUPER_ADMIN') {
     return (
       <div className="border border-slate-800 rounded-2xl p-16 text-center text-slate-500">
         <HelpCircle className="h-10 w-10 mx-auto text-slate-700 mb-3" />

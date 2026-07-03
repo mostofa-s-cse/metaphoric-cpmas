@@ -18,7 +18,7 @@ import {
   useCreateVendorMutation,
   useUpdateVendorMutation,
   useDeleteVendorMutation,
-  useGetProjectsQuery,
+  useGetProjectsListQuery,
   ApiVendor,
 } from '@/store/api/cpmasApi';
 import { vendorSchema, VendorFormValues } from '@/lib/schemas';
@@ -41,7 +41,7 @@ export default function VendorsPage() {
 
   // Queries & Mutations
   const { data, isLoading: isFetching, error: fetchError, refetch: refetchVendors } = useGetVendorsQuery();
-  const { data: prjData } = useGetProjectsQuery();
+  const { data: prjData } = useGetProjectsListQuery();
   const [createVendor, { isLoading: isCreating }] = useCreateVendorMutation();
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
   const [deleteVendor, { isLoading: isDeleting }] = useDeleteVendorMutation();
