@@ -33,7 +33,7 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
-    mode: 'onBlur', // Validate on blur for better UX
+    mode: 'onChange',
   });
 
   const onSubmit = async (values: LoginFormValues) => {

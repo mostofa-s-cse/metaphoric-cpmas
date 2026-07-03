@@ -86,7 +86,7 @@ export default function DocumentsPage() {
       vendorId: '',
       description: '',
     },
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   const handleOpenCreate = () => {

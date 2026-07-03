@@ -84,7 +84,7 @@ export default function VendorsPage() {
       paidAmount: '0',
       notes: '',
     },
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   // Track updates to selected vendor when list refreshes

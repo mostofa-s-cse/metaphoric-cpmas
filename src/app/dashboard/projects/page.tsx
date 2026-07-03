@@ -100,7 +100,7 @@ export default function ProjectsPage() {
       projectType: 'CONSTRUCTION',
       description: '',
     },
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   // Track selected project updates when projects list refreshes

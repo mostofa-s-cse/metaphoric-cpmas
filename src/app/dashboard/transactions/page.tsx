@@ -96,7 +96,7 @@ export default function TransactionsPage() {
       referenceNumber: '',
       notes: '',
     },
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   // React Hook Form for Cash Out
@@ -118,7 +118,7 @@ export default function TransactionsPage() {
       referenceNumber: '',
       notes: '',
     },
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   const handleOpenCashIn = () => {
