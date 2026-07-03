@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useGetAuditLogsQuery, useDeleteAuditLogsMutation } from '@/store/api/cpmasApi';
 import { useToast } from '@/hooks/useToast';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import {
   ShieldAlert,
   Search,
@@ -127,7 +130,7 @@ export default function AuditLogsPage() {
   if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN')) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-8">
-        <div className="h-14 w-14 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center mb-4">
+        <div className="h-14 w-14 bg-rose-500/10 border border-rose-500/20 text-rose-450 rounded-2xl flex items-center justify-center mb-4">
           <ShieldAlert className="h-7 w-7" />
         </div>
         <h2 className="text-lg font-bold text-slate-100 mb-1">Access Restricted</h2>
@@ -173,7 +176,7 @@ export default function AuditLogsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
             <History className="h-5.5 w-5.5 text-cyan-400" />
@@ -184,28 +187,26 @@ export default function AuditLogsPage() {
           </p>
         </div>
 
-        <button
+        <Button
+          variant="secondary"
           onClick={() => refetch()}
-          disabled={isLoading || isFetching}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 rounded-xl active:scale-[0.98] transition-all cursor-pointer text-xs disabled:opacity-50"
+          loading={isFetching}
+          icon={<RefreshCw className="h-3.5 w-3.5" />}
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
+          Refresh
+        </Button>
       </div>
 
       {/* Filter and search bar controls */}
       <div className="bg-slate-950/20 border border-slate-800/60 rounded-2xl p-4 space-y-4">
         <div className="flex flex-col xl:flex-row gap-3">
           {/* Search bar */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
+          <div className="flex-1">
+            <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search logs by action, details description, user name or email..."
-              className="w-full bg-slate-950/40 border border-slate-800/80 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/30 transition-all shadow-inner"
+              icon={<Search className="h-4 w-4" />}
             />
           </div>
 
@@ -213,25 +214,25 @@ export default function AuditLogsPage() {
             {/* Action type filter */}
             <div className="flex items-center gap-2">
               <SlidersHorizontal className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-              <select
+              <Select
                 value={actionGroup}
                 onChange={handleActionGroupChange}
-                className="bg-slate-950/40 border border-slate-800/80 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500/80 cursor-pointer min-w-[130px]"
+                className="min-w-[130px]"
               >
                 <option value="ALL">All Actions</option>
                 <option value="CREATE">CREATE / POST</option>
                 <option value="UPDATE">UPDATE / PUT</option>
                 <option value="DELETE">DELETE / REMOVE</option>
                 <option value="USER_LOGIN">USER LOGIN</option>
-              </select>
+              </Select>
             </div>
 
             {/* Entity type filter */}
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 value={entityType}
                 onChange={handleEntityTypeChange}
-                className="bg-slate-950/40 border border-slate-800/80 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500/80 cursor-pointer min-w-[140px]"
+                className="min-w-[140px]"
               >
                 <option value="ALL">All Modules</option>
                 <option value="PROJECT">Projects</option>
@@ -243,7 +244,7 @@ export default function AuditLogsPage() {
                 <option value="CASH_IN">Cash In Ledger</option>
                 <option value="CASH_OUT">Cash Out Ledger</option>
                 <option value="DOCUMENT">Documents</option>
-              </select>
+              </Select>
             </div>
 
             {/* Date Range Filters */}
@@ -276,24 +277,27 @@ export default function AuditLogsPage() {
 
             {/* Pruning actions */}
             {canPrune && (
-              <button
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="flex items-center gap-1 py-1.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/35 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                icon={<Trash2 className="h-3.5 w-3.5" />}
                 title="Clear logs in selected date range"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>Clear History</span>
-              </button>
+                Clear History
+              </Button>
             )}
 
             {hasActiveFilters && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleClearFilters}
-                className="flex items-center justify-center p-2 bg-slate-900/60 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-xl transition-all cursor-pointer shrink-0"
+                className="p-2.5 rounded-xl"
                 title="Clear Filters"
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -420,11 +424,11 @@ export default function AuditLogsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 space-y-4 shadow-2xl relative">
             <button
               onClick={() => setDeleteConfirmOpen(false)}
-              className="absolute top-4 right-4 p-1 text-slate-500 hover:text-slate-300 bg-slate-850/40 border border-slate-850 rounded-lg"
+              className="absolute top-4 right-4 p-1 text-slate-500 hover:text-slate-300 bg-slate-850/40 border border-slate-850 rounded-lg animate-none shrink-0"
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="h-12 w-12 bg-rose-500/10 border border-rose-500/20 text-rose-450 rounded-xl flex items-center justify-center">
+            <div className="h-12 w-12 bg-rose-500/10 border border-rose-500/20 text-rose-450 rounded-xl flex items-center justify-center animate-none shrink-0">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
@@ -435,24 +439,21 @@ export default function AuditLogsPage() {
               </p>
             </div>
             <div className="flex items-center justify-end gap-3 pt-2">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="py-2 px-4 bg-slate-950 border border-slate-800 text-slate-300 font-semibold rounded-xl text-xs hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
                 onClick={handlePruneLogs}
-                disabled={isPruning}
-                className="flex items-center gap-1.5 py-2 px-4 bg-rose-600 hover:bg-rose-550 text-slate-950 font-bold rounded-xl text-xs active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                loading={isPruning}
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                className="bg-rose-600 hover:bg-rose-550 text-slate-950 font-bold border-none"
               >
-                {isPruning ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-                <span>Yes, Clear History</span>
-              </button>
+                Yes, Clear History
+              </Button>
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Pagination } from '@/components/ui/Pagination';
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { Button } from '@/components/ui/Button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -210,7 +211,7 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
             <FileText className="h-5.5 w-5.5 text-cyan-400" />
@@ -221,13 +222,12 @@ export default function DocumentsPage() {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={handleOpenCreate}
-          className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all cursor-pointer text-xs"
+          icon={<Upload className="h-4.5 w-4.5" />}
         >
-          <Upload className="h-4.5 w-4.5" />
-          <span>Upload Document</span>
-        </button>
+          Upload Document
+        </Button>
       </div>
 
       {/* Filters */}
@@ -394,8 +394,8 @@ export default function DocumentsPage() {
       {/* Upload Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 pb-2 border-b border-slate-800">
               <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
                 <Upload className="h-4.5 w-4.5 text-cyan-400" />
                 Upload New Document
@@ -530,21 +530,19 @@ export default function DocumentsPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isCreating || isUploading}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
+                  loading={isUploading || isCreating}
                 >
-                  {(isCreating || isUploading) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
-                </button>
+                  Upload File
+                </Button>
               </div>
             </form>
           </div>

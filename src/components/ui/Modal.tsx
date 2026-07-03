@@ -2,11 +2,7 @@
 
 /**
  * Modal — base dialog component (shadcn Dialog style, zero external deps).
- *
- * Usage:
- *   <Modal open={isOpen} onClose={() => setIsOpen(false)} title="Create Project">
- *     <p>content here</p>
- *   </Modal>
+ * Responsive paddings and layouts for optimized mobile views.
  */
 
 import React, { useEffect, useCallback } from 'react';
@@ -63,7 +59,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
     >
@@ -79,20 +75,20 @@ export function Modal({
         className={`
           relative w-full ${sizeMap[size]}
           bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl
-          overflow-y-auto max-h-[90vh]
+          overflow-y-auto max-h-[90vh] sm:max-h-[85vh]
           animate-in fade-in zoom-in-95 duration-150
           ${className}
         `}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between p-6 pb-4 border-b border-slate-800">
+          <div className="flex items-start justify-between p-4 pb-3 sm:p-6 sm:pb-4 border-b border-slate-800">
             <div>
               {title && (
                 <h2 className="text-sm font-bold text-slate-100">{title}</h2>
               )}
               {description && (
-                <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+                <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{description}</p>
               )}
             </div>
             <button
@@ -106,7 +102,7 @@ export function Modal({
         )}
 
         {/* Body */}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

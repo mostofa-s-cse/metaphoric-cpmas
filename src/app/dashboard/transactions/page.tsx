@@ -10,6 +10,7 @@ import { DatePickerInput } from '@/components/ui/DatePickerInput';
 import { Modal } from '@/components/ui/Modal';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -225,7 +226,7 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
             <ArrowUpDown className="h-5.5 w-5.5 text-cyan-400" />
@@ -238,20 +239,19 @@ export default function TransactionsPage() {
 
         {user && user.role !== 'PROJECT_MANAGER' && (
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={handleOpenCashIn}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all cursor-pointer text-xs"
+              icon={<Plus className="h-4 w-4" />}
             >
-              <Plus className="h-4 w-4" />
-              <span>Record Cash In</span>
-            </button>
-            <button
+              Record Cash In
+            </Button>
+            <Button
               onClick={handleOpenCashOut}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 text-slate-100 border border-slate-700 font-bold rounded-xl active:scale-[0.98] transition-all cursor-pointer text-xs"
+              variant="secondary"
+              icon={<Plus className="h-4 w-4" />}
             >
-              <Plus className="h-4 w-4" />
-              <span>Record Cash Out</span>
-            </button>
+              Record Cash Out
+            </Button>
           </div>
         )}
       </div>
@@ -611,21 +611,19 @@ export default function TransactionsPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsCashInModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer animate-in duration-200"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isCreatingCashIn}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
+                  loading={isCreatingCashIn}
                 >
-                  {isCreatingCashIn && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Confirm Receipt</span>
-                </button>
+                  Confirm Receipt
+                </Button>
               </div>
             </form>
       </Modal>
@@ -790,21 +788,19 @@ export default function TransactionsPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsCashOutModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer animate-in duration-200"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isCreatingCashOut}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
+                  loading={isCreatingCashOut}
                 >
-                  {isCreatingCashOut && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Confirm Payment</span>
-                </button>
+                  Confirm Payment
+                </Button>
               </div>
             </form>
       </Modal>

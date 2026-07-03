@@ -10,6 +10,7 @@ import { DatePickerInput } from '@/components/ui/DatePickerInput';
 import { Modal } from '@/components/ui/Modal';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -368,7 +369,7 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
             <Users2 className="h-5.5 w-5.5 text-cyan-400" />
@@ -383,22 +384,20 @@ export default function EmployeesPage() {
         {user && user.role !== 'DATA_ENTRY_OPERATOR' && (
           <div className="flex gap-2">
             {activeTab === 'employees' && (
-              <button
+              <Button
                 onClick={handleOpenEmployeeCreate}
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer text-xs"
+                icon={<UserPlus className="h-4.5 w-4.5" />}
               >
-                <UserPlus className="h-4.5 w-4.5" />
-                <span>Register Employee</span>
-              </button>
+                Register Employee
+              </Button>
             )}
             {activeTab === 'labour' && (
-              <button
+              <Button
                 onClick={handleOpenLabourCreate}
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer text-xs"
+                icon={<UserPlus className="h-4.5 w-4.5" />}
               >
-                <UserPlus className="h-4.5 w-4.5" />
-                <span>Register Labour</span>
-              </button>
+                Register Labour
+              </Button>
             )}
           </div>
         )}
@@ -902,21 +901,19 @@ export default function EmployeesPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsEmployeeModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isCreatingEmployee}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
+                  loading={isCreatingEmployee}
                 >
-                  {isCreatingEmployee && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Register Employee</span>
-                </button>
+                  Register Employee
+                </Button>
               </div>
             </form>
       </Modal>
@@ -1018,21 +1015,19 @@ export default function EmployeesPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsLabourModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isCreatingLabour}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
+                  loading={isCreatingLabour}
                 >
-                  {isCreatingLabour && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Register Worker</span>
-                </button>
+                  Register Worker
+                </Button>
               </div>
             </form>
       </Modal>
@@ -1203,21 +1198,19 @@ export default function EmployeesPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsSalaryModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isProcessingSalary}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
+                  loading={isProcessingSalary}
                 >
-                  {isProcessingSalary && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Disburse Salary</span>
-                </button>
+                  Disburse Salary
+                </Button>
               </div>
             </form>
         </Modal>

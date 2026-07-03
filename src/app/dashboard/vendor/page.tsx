@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Drawer } from '@/components/ui/Drawer';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -215,7 +216,7 @@ export default function VendorsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
             <Briefcase className="h-5.5 w-5.5 text-cyan-400" />
@@ -227,13 +228,12 @@ export default function VendorsPage() {
         </div>
 
         {user && !['ACCOUNTANT', 'DATA_ENTRY_OPERATOR'].includes(user.role) && (
-          <button
+          <Button
             onClick={handleOpenCreate}
-            className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all cursor-pointer text-xs"
+            icon={<Plus className="h-4.5 w-4.5" />}
           >
-            <Plus className="h-4.5 w-4.5" />
-            <span>Register Vendor</span>
-          </button>
+            Register Vendor
+          </Button>
         )}
       </div>
 
@@ -685,21 +685,19 @@ export default function VendorsPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isBusy}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  loading={isBusy}
                 >
-                  {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{modalMode === 'create' ? 'Register' : 'Save Changes'}</span>
-                </button>
+                  {modalMode === 'create' ? 'Register' : 'Save Changes'}
+                </Button>
               </div>
           </form>
       </Modal>

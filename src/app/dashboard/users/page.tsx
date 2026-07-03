@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { useDispatch } from 'react-redux';
 import { addToast } from '@/store/slices/uiSlice';
+import { Button } from '@/components/ui/Button';
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -216,7 +217,7 @@ export default function UsersPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-400">
             User Management
@@ -225,13 +226,12 @@ export default function UsersPage() {
             Manage system access, roles, and permissions for your organization&apos;s team members.
           </p>
         </div>
-        <button
+        <Button
           onClick={handleOpenCreate}
-          className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer text-sm"
+          icon={<Plus className="h-4.5 w-4.5" />}
         >
-          <Plus className="h-4 w-4" />
-          <span>Add User</span>
-        </button>
+          Add New User
+        </Button>
       </div>
 
       {/* Role Stats Cards */}
@@ -480,21 +480,19 @@ export default function UsersPage() {
               </div>
 
               <div className="pt-3 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 flex items-center gap-2"
+                  loading={isSubmitting}
                 >
-                  {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {modalMode === 'create' ? 'Create Account' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

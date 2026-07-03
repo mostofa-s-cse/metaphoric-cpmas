@@ -2,11 +2,7 @@
 
 /**
  * Drawer — base slide-over component (shadcn Sheet style).
- *
- * Usage:
- *   <Drawer open={isOpen} onClose={() => setIsOpen(false)} title="Details">
- *     <p>content here</p>
- *   </Drawer>
+ * Responsive paddings optimized for compact mobile screen widths.
  */
 
 import React, { useEffect, useCallback } from 'react';
@@ -82,10 +78,10 @@ export function Drawer({
       >
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between p-6 border-b border-slate-800 shrink-0">
+          <div className="flex items-start justify-between p-4 sm:p-6 border-b border-slate-800 shrink-0">
             <div>
-              {title && <h2 className="text-lg font-bold text-slate-100">{title}</h2>}
-              {description && <p className="text-sm text-slate-400 mt-1">{description}</p>}
+              {title && <h2 className="text-base sm:text-lg font-bold text-slate-100">{title}</h2>}
+              {description && <p className="text-xs sm:text-sm text-slate-400 mt-1">{description}</p>}
             </div>
             <button
               onClick={onClose}
@@ -97,7 +93,7 @@ export function Drawer({
         )}
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

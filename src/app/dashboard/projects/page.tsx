@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Drawer } from '@/components/ui/Drawer';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -330,7 +331,7 @@ export default function ProjectsPage() {
   return (
     <div className="flex-1 space-y-6">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col items-start md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
             <FolderKanban className="h-5.5 w-5.5 text-cyan-400" />
@@ -345,13 +346,12 @@ export default function ProjectsPage() {
         {(user?.role === 'SUPER_ADMIN' ||
           user?.role === 'ADMIN' ||
           user?.role === 'PROJECT_MANAGER') && (
-          <button
+          <Button
             onClick={handleOpenCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 text-xs font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer"
+            icon={<Plus className="h-4.5 w-4.5" />}
           >
-            <Plus className="h-4.5 w-4.5" />
-            <span>New Project</span>
-          </button>
+            New Project
+          </Button>
         )}
       </div>
 
@@ -897,21 +897,19 @@ export default function ProjectsPage() {
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer animate-in duration-200"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isBusy}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  loading={isBusy}
                 >
-                  {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{modalMode === 'create' ? 'Create Project' : 'Save Changes'}</span>
-                </button>
+                  {modalMode === 'create' ? 'Create Project' : 'Save Changes'}
+                </Button>
               </div>
             </form>
       </Modal>
