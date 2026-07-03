@@ -12,20 +12,20 @@ export async function GET(request: NextRequest) {
 
     const { page, limit, skip, take } = getPaginationParams(request);
 
-    const [contractors, total] = await Promise.all([
-      prisma.contractor.findMany({
+    const [vendors, total] = await Promise.all([
+      prisma.vendor.findMany({
         orderBy: { name: 'asc' },
         skip,
         take,
         include: { cashOuts: true },
       }),
-      prisma.contractor.count(),
+      prisma.vendor.count(),
     ]);
 
-    return NextResponse.json(formatPaginatedResponse('contractors', contractors, total, page, limit));
+    return NextResponse.json(formatPaginatedResponse('vendors', vendors, total, page, limit));
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch contractors' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch vendors' }, { status: 500 });
   }
 }
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // RBAC: PM, Admin, Super Admin can register contractors
+    // RBAC: PM, Admin, Super Admin can register vendors
     if (user.role === 'ACCOUNTANT' || user.role === 'DATA_ENTRY_OPERATOR') {
       return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
     }
@@ -52,17 +52,17 @@ export async function POST(request: Request) {
     const pAmt = parseFloat(paidAmount) || 0.0;
     const dAmt = cAmt - pAmt;
 
-    const contractor = await prisma.contractor.create({
+    const vendor = await prisma.vendor.create({
       data: { name, companyName, contactNumber, address, workType, contractAmount: cAmt, paidAmount: pAmt, dueAmount: dAmt, notes },
     });
 
     await prisma.auditLog.create({
-      data: { userId: user.id, action: 'CREATE_CONTRACTOR', details: `Registered contractor: ${contractor.name} (${contractor.workType})` },
+      data: { userId: user.id, action: 'CREATE_VENDOR', details: `Registered vendor: ${vendor.name} (${vendor.workType})` },
     });
 
-    return NextResponse.json({ contractor });
+    return NextResponse.json({ vendor });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to create contractor' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create vendor' }, { status: 500 });
   }
 }

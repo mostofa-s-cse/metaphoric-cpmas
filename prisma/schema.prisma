@@ -94,7 +94,7 @@ model Supplier {
   documents Document[]
 }
 
-model Contractor {
+model Vendor {
   id             String     @id @default(uuid())
   name           String
   companyName    String?
@@ -213,8 +213,8 @@ model CashOut {
   // Relations to track specific disbursements
   supplierId      String?
   supplier        Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  contractorId    String?
-  contractor      Contractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  vendorId        String?
+  vendor          Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   employeeId      String?
   employee        Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   labourId        String?
@@ -261,8 +261,8 @@ model Document {
   project           Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
   supplierId        String?
   supplier          Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  contractorId      String?
-  contractor        Contractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  vendorId          String?
+  vendor            Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   employeeId        String?
   employee          Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   labourId          String?

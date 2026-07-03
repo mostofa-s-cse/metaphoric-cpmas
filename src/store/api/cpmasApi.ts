@@ -63,7 +63,7 @@ export interface ApiSupplier {
   createdAt: string;
 }
 
-export interface ApiContractor {
+export interface ApiVendor {
   id: string;
   name: string;
   companyName: string | null;
@@ -161,10 +161,10 @@ export interface ApiDocument {
   category: string;
   projectId?: string | null;
   supplierId?: string | null;
-  contractorId?: string | null;
+  vendorId?: string | null;
   project?: { name: string; code: string } | null;
   supplier?: { name: string } | null;
-  contractor?: { name: string } | null;
+  vendor?: { name: string } | null;
   employee?: { fullName: string } | null;
   createdAt: string;
 }
@@ -193,7 +193,7 @@ const TAGS = [
   'Users',
   'Projects',
   'Suppliers',
-  'Contractors',
+  'Vendors',
   'Employees',
   'Labours',
   'Attendance',
@@ -358,40 +358,40 @@ export const cpmasApi = createApi({
       ],
     }),
 
-    // ── CONTRACTORS ──────────────────────────────────────────────────────────
+    // ── VENDORS ──────────────────────────────────────────────────────────────
 
-    getContractors: builder.query<{ contractors: ApiContractor[] }, void>({
-      query: () => '/contractors',
+    getVendors: builder.query<{ vendors: ApiVendor[] }, void>({
+      query: () => '/vendors',
       providesTags: (result) =>
         result
           ? [
-              ...result.contractors.map(({ id }) => ({ type: 'Contractors' as CacheTag, id })),
-              { type: 'Contractors', id: 'LIST' },
+              ...result.vendors.map(({ id }) => ({ type: 'Vendors' as CacheTag, id })),
+              { type: 'Vendors', id: 'LIST' },
             ]
-          : [{ type: 'Contractors', id: 'LIST' }],
+          : [{ type: 'Vendors', id: 'LIST' }],
     }),
 
-    createContractor: builder.mutation<{ contractor: ApiContractor }, Partial<ApiContractor>>({
-      query: (body) => ({ url: '/contractors', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Contractors', id: 'LIST' }],
+    createVendor: builder.mutation<{ vendor: ApiVendor }, Partial<ApiVendor>>({
+      query: (body) => ({ url: '/vendors', method: 'POST', body }),
+      invalidatesTags: [{ type: 'Vendors', id: 'LIST' }],
     }),
 
-    updateContractor: builder.mutation<
-      { contractor: ApiContractor },
-      { id: string } & Partial<ApiContractor>
+    updateVendor: builder.mutation<
+      { vendor: ApiVendor },
+      { id: string } & Partial<ApiVendor>
     >({
-      query: ({ id, ...body }) => ({ url: `/contractors/${id}`, method: 'PUT', body }),
+      query: ({ id, ...body }) => ({ url: `/vendors/${id}`, method: 'PUT', body }),
       invalidatesTags: (_result, _err, { id }) => [
-        { type: 'Contractors', id },
-        { type: 'Contractors', id: 'LIST' },
+        { type: 'Vendors', id },
+        { type: 'Vendors', id: 'LIST' },
       ],
     }),
 
-    deleteContractor: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({ url: `/contractors/${id}`, method: 'DELETE' }),
+    deleteVendor: builder.mutation<{ success: boolean }, string>({
+      query: (id) => ({ url: `/vendors/${id}`, method: 'DELETE' }),
       invalidatesTags: (_result, _err, id) => [
-        { type: 'Contractors', id },
-        { type: 'Contractors', id: 'LIST' },
+        { type: 'Vendors', id },
+        { type: 'Vendors', id: 'LIST' },
       ],
     }),
 
@@ -595,11 +595,11 @@ export const {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
-  // Contractors
-  useGetContractorsQuery,
-  useCreateContractorMutation,
-  useUpdateContractorMutation,
-  useDeleteContractorMutation,
+  // Vendors
+  useGetVendorsQuery,
+  useCreateVendorMutation,
+  useUpdateVendorMutation,
+  useDeleteVendorMutation,
   // Employees
   useGetEmployeesQuery,
   useCreateEmployeeMutation,

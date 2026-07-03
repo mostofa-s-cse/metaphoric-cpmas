@@ -62,8 +62,8 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState<'employees' | 'labour' | 'attendance'>('employees');
 
   // Queries & Mutations
-  const { data: empData, isLoading: isFetchingEmployees, error: empError } = useGetEmployeesQuery();
-  const { data: labData, isLoading: isFetchingLabours, error: labError } = useGetLaboursQuery();
+  const { data: empData, isLoading: isFetchingEmployees, error: empError, refetch: refetchEmployees } = useGetEmployeesQuery();
+  const { data: labData, isLoading: isFetchingLabours, error: labError, refetch: refetchLabours } = useGetLaboursQuery();
   const { data: prjData } = useGetProjectsQuery();
 
   const [createEmployee, { isLoading: isCreatingEmployee }] = useCreateEmployeeMutation();
@@ -221,6 +221,7 @@ export default function EmployeesPage() {
         monthlySalary: parseFloat(values.monthlySalary),
       }).unwrap();
       showSuccessToast('Employee registered successfully');
+      refetchEmployees();
       setIsEmployeeModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to register employee');
@@ -234,6 +235,7 @@ export default function EmployeesPage() {
         dailyWage: parseFloat(values.dailyWage),
       }).unwrap();
       showSuccessToast('Labour worker registered successfully');
+      refetchLabours();
       setIsLabourModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to register worker');
@@ -251,9 +253,11 @@ export default function EmployeesPage() {
       if (personToDelete.type === 'employee') {
         await deleteEmployee(personToDelete.id).unwrap();
         showSuccessToast('Employee record deleted');
+        refetchEmployees();
       } else {
         await deleteLabour(personToDelete.id).unwrap();
         showSuccessToast('Worker record deleted');
+        refetchLabours();
       }
       setDeleteConfirmOpen(false);
       setPersonToDelete(null);

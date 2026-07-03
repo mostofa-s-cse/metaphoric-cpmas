@@ -42,14 +42,14 @@ interface DashboardClientProps {
     completedProjects: number;
     totalClients: number;
     totalSuppliers: number;
-    totalContractors: number;
+    totalVendors: number;
     totalEmployees: number;
     totalLabour: number;
     totalCashIn: number;
     totalCashOut: number;
     netProfit: number;
     supplierDue: number;
-    contractorDue: number;
+    vendorDue: number;
     salaryDue: number;
     cashBalance: number;
     monthlyRevenue: number;
@@ -120,8 +120,8 @@ export default function DashboardClient({
       color: 'text-orange-400 border-orange-500/20 bg-orange-500/5',
     },
     {
-      title: 'Total Contractors',
-      value: summary.totalContractors,
+      title: 'Total Vendors',
+      value: summary.totalVendors,
       desc: 'Specialized teams',
       icon: Briefcase,
       color: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5',
@@ -176,8 +176,8 @@ export default function DashboardClient({
       color: 'text-amber-400 border-amber-500/20 bg-amber-500/5',
     },
     {
-      title: 'Contractor Due',
-      value: formatCurrency(summary.contractorDue),
+      title: 'Vendor Due',
+      value: formatCurrency(summary.vendorDue),
       desc: 'Pending milestones',
       icon: AlertTriangle,
       color: 'text-red-400 border-red-500/20 bg-red-500/5',

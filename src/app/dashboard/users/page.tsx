@@ -66,7 +66,7 @@ const ROLE_CONFIG = {
     icon: Shield,
     color: 'text-cyan-400 border-cyan-500/20 bg-cyan-500/5',
     badge: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20',
-    desc: 'Manage projects, suppliers, contractors, reports',
+    desc: 'Manage projects, suppliers, vendors, reports',
   },
   ACCOUNTANT: {
     label: 'Accountant',
@@ -80,7 +80,7 @@ const ROLE_CONFIG = {
     icon: UserCog,
     color: 'text-blue-400 border-blue-500/20 bg-blue-500/5',
     badge: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-    desc: 'Manage projects, contractors, materials, labour',
+    desc: 'Manage projects, vendors, materials, labour',
   },
   DATA_ENTRY_OPERATOR: {
     label: 'Data Entry',
@@ -105,7 +105,7 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
 
   // RTK Query
-  const { data, isLoading } = useGetUsersQuery();
+  const { data, isLoading, refetch: refetchUsers } = useGetUsersQuery();
   const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [deleteUser] = useDeleteUserMutation();
@@ -146,6 +146,7 @@ export default function UsersPage() {
     if (!window.confirm(`Are you sure you want to permanently delete "${name}"? This action cannot be undone.`)) return;
     try {
       await deleteUser(id).unwrap();
+      refetchUsers();
       dispatch(addToast({ message: `User "${name}" has been deleted.`, variant: 'success' }));
     } catch {
       dispatch(addToast({ message: 'Failed to delete user.', variant: 'error' }));
@@ -155,6 +156,7 @@ export default function UsersPage() {
   const onCreateSubmit = async (values: CreateUserFormData) => {
     try {
       await createUser(values).unwrap();
+      refetchUsers();
       setIsModalOpen(false);
       dispatch(addToast({ message: 'User account created successfully.', variant: 'success' }));
     } catch {
@@ -174,6 +176,7 @@ export default function UsersPage() {
 
     try {
       await updateUser(body).unwrap();
+      refetchUsers();
       setIsModalOpen(false);
       dispatch(addToast({ message: 'User updated successfully.', variant: 'success' }));
     } catch {

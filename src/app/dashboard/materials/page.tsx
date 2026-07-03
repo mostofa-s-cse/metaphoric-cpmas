@@ -41,7 +41,7 @@ export default function MaterialsPage() {
   const { success: showSuccessToast, error: showErrorToast } = useToast();
 
   // Queries & Mutations
-  const { data: matData, isLoading: isFetchingMaterials, error: matError } = useGetMaterialsQuery();
+  const { data: matData, isLoading: isFetchingMaterials, error: matError, refetch: refetchMaterials } = useGetMaterialsQuery();
   const { data: prjData, isLoading: isFetchingProjects } = useGetProjectsQuery();
   const { data: supData, isLoading: isFetchingSuppliers } = useGetSuppliersQuery();
   const [createMaterial, { isLoading: isCreating }] = useCreateMaterialMutation();
@@ -122,6 +122,7 @@ export default function MaterialsPage() {
     try {
       await deleteMaterial(materialToDelete).unwrap();
       showSuccessToast('Purchase record deleted');
+      refetchMaterials();
       setDeleteConfirmOpen(false);
       setMaterialToDelete(null);
     } catch (err: any) {
@@ -138,6 +139,7 @@ export default function MaterialsPage() {
       };
       await createMaterial(payload).unwrap();
       showSuccessToast('Material purchase logged successfully');
+      refetchMaterials();
       setIsModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to log material purchase');

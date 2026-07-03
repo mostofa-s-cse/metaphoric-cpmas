@@ -59,8 +59,8 @@ export default function TransactionsPage() {
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; type: 'in' | 'out' } | null>(null);
 
   // Queries & Mutations
-  const { data: cashInResponse, isLoading: isFetchingCashIn, error: cashInError } = useGetCashInsQuery();
-  const { data: cashOutResponse, isLoading: isFetchingCashOut, error: cashOutError } = useGetCashOutsQuery();
+  const { data: cashInResponse, isLoading: isFetchingCashIn, error: cashInError, refetch: refetchCashIn } = useGetCashInsQuery();
+  const { data: cashOutResponse, isLoading: isFetchingCashOut, error: cashOutError, refetch: refetchCashOut } = useGetCashOutsQuery();
   const { data: prjData } = useGetProjectsQuery();
 
   const [createCashIn, { isLoading: isCreatingCashIn }] = useCreateCashInMutation();
@@ -160,6 +160,7 @@ export default function TransactionsPage() {
       };
       await createCashIn(payload).unwrap();
       showSuccessToast('Client payment recorded');
+      refetchCashIn();
       setIsCashInModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to record transaction');
@@ -175,6 +176,7 @@ export default function TransactionsPage() {
       };
       await createCashOut(payload).unwrap();
       showSuccessToast('Cash disbursement payment recorded');
+      refetchCashOut();
       setIsCashOutModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to record transaction');
@@ -191,8 +193,10 @@ export default function TransactionsPage() {
     try {
       if (transactionToDelete.type === 'in') {
         await deleteCashIn(transactionToDelete.id).unwrap();
+        refetchCashIn();
       } else {
         await deleteCashOut(transactionToDelete.id).unwrap();
+        refetchCashOut();
       }
       showSuccessToast('Transaction deleted successfully');
       setDeleteConfirmOpen(false);
@@ -693,7 +697,7 @@ export default function TransactionsPage() {
                     <option value="FINAL_BILL">Final Bill</option>
                     <option value="MATERIALS">Raw Materials Purchase</option>
                     <option value="LABOR">Site Labor Daily Wages</option>
-                    <option value="CONTRACTOR_PAYMENT">Subcontractor Payment Milestone</option>
+                    <option value="VENDOR_PAYMENT">Vendor Payment Milestone</option>
                     <option value="OFFICE_RENT">Office Rent</option>
                     <option value="UTILITIES">Electricity &amp; Internet Utilities</option>
                     <option value="TRANSPORTATION">Transportation</option>

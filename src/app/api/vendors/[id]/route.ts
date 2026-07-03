@@ -20,16 +20,16 @@ export async function PUT(
     const body = await request.json();
     const { name, companyName, contactNumber, address, workType, contractAmount, paidAmount, notes } = body;
 
-    const contractor = await prisma.contractor.findUnique({ where: { id } });
-    if (!contractor) {
-      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+    const vendor = await prisma.vendor.findUnique({ where: { id } });
+    if (!vendor) {
+      return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
     }
 
-    const cAmt = contractAmount !== undefined ? parseFloat(contractAmount) : contractor.contractAmount;
-    const pAmt = paidAmount !== undefined ? parseFloat(paidAmount) : contractor.paidAmount;
+    const cAmt = contractAmount !== undefined ? parseFloat(contractAmount) : vendor.contractAmount;
+    const pAmt = paidAmount !== undefined ? parseFloat(paidAmount) : vendor.paidAmount;
     const dAmt = cAmt - pAmt;
 
-    const updatedContractor = await prisma.contractor.update({
+    const updatedVendor = await prisma.vendor.update({
       where: { id },
       data: {
         name: name || undefined,
@@ -47,15 +47,15 @@ export async function PUT(
     await prisma.auditLog.create({
       data: {
         userId: user.id,
-        action: 'UPDATE_CONTRACTOR',
-        details: `Updated contractor: ${updatedContractor.name}`,
+        action: 'UPDATE_VENDOR',
+        details: `Updated vendor: ${updatedVendor.name}`,
       },
     });
 
-    return NextResponse.json({ contractor: updatedContractor });
+    return NextResponse.json({ vendor: updatedVendor });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to update contractor' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update vendor' }, { status: 500 });
   }
 }
 
@@ -74,24 +74,24 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const contractor = await prisma.contractor.findUnique({ where: { id } });
-    if (!contractor) {
-      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+    const vendor = await prisma.vendor.findUnique({ where: { id } });
+    if (!vendor) {
+      return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
     }
 
-    await prisma.contractor.delete({ where: { id } });
+    await prisma.vendor.delete({ where: { id } });
 
     await prisma.auditLog.create({
       data: {
         userId: user.id,
-        action: 'DELETE_CONTRACTOR',
-        details: `Deleted contractor: ${contractor.name}`,
+        action: 'DELETE_VENDOR',
+        details: `Deleted vendor: ${vendor.name}`,
       },
     });
 
-    return NextResponse.json({ success: true, message: 'Contractor deleted successfully' });
+    return NextResponse.json({ success: true, message: 'Vendor deleted successfully' });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to delete contractor' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete vendor' }, { status: 500 });
   }
 }

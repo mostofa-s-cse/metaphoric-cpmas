@@ -19,7 +19,7 @@ export async function GET() {
         include: {
           project: { select: { name: true, code: true } },
           supplier: { select: { name: true } },
-          contractor: { select: { name: true } },
+          vendor: { select: { name: true } },
           employee: { select: { fullName: true } },
         },
       }),
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       expenseCategory,
       paidTo,
       supplierId,
-      contractorId,
+      vendorId,
       employeeId,
     } = body;
 
@@ -117,15 +117,15 @@ export async function POST(request: Request) {
           referenceNumber,
           notes,
           supplierId: supplierId || null,
-          contractorId: contractorId || null,
+          vendorId: vendorId || null,
           employeeId: employeeId || null,
         },
       });
 
-      // Update contractor balances if contractor payment
-      if (contractorId) {
-        await prisma.contractor.update({
-          where: { id: contractorId },
+      // Update vendor balances if vendor payment
+      if (vendorId) {
+        await prisma.vendor.update({
+          where: { id: vendorId },
           data: {
             paidAmount: { increment: txnAmount },
             dueAmount: { decrement: txnAmount },

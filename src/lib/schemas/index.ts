@@ -172,10 +172,10 @@ export const supplierSchema = z.object({
 export type SupplierFormValues = z.infer<typeof supplierSchema>;
 
 // ─────────────────────────────────────────────
-// CONTRACTORS
+// VENDORS
 // ─────────────────────────────────────────────
-export const contractorSchema = z.object({
-  name: z.string().min(2, 'Contractor name is required'),
+export const vendorSchema = z.object({
+  name: z.string().min(2, 'Vendor name is required'),
   companyName: z.string().optional().or(z.literal('')),
   contactNumber: z.string().min(5, 'Contact number is required'),
   address: z.string().optional().or(z.literal('')),
@@ -195,7 +195,7 @@ export const contractorSchema = z.object({
   notes: z.string().max(500).optional().or(z.literal('')),
 });
 
-export type ContractorFormValues = z.infer<typeof contractorSchema>;
+export type VendorFormValues = z.infer<typeof vendorSchema>;
 
 // ─────────────────────────────────────────────
 // EMPLOYEES
@@ -313,7 +313,7 @@ export const documentSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   projectId: z.string().optional().or(z.literal('')),
   supplierId: z.string().optional().or(z.literal('')),
-  contractorId: z.string().optional().or(z.literal('')),
+  vendorId: z.string().optional().or(z.literal('')),
   employeeId: z.string().optional().or(z.literal('')),
 });
 

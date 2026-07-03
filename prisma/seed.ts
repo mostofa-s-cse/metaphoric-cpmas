@@ -122,8 +122,8 @@ async function main() {
     }
   }
 
-  // 4. Create Sample Contractors
-  const contractorData = [
+  // 4. Create Sample Vendors
+  const vendorData = [
     {
       name: 'John Doe Civil works',
       companyName: 'Doe Excavations & Concrete LLC',
@@ -148,11 +148,11 @@ async function main() {
     },
   ];
 
-  for (const ctr of contractorData) {
-    const existing = await prisma.contractor.findFirst({ where: { name: ctr.name } });
+  for (const ctr of vendorData) {
+    const existing = await prisma.vendor.findFirst({ where: { name: ctr.name } });
     if (!existing) {
-      await prisma.contractor.create({ data: ctr });
-      console.log(`Created contractor: ${ctr.name}`);
+      await prisma.vendor.create({ data: ctr });
+      console.log(`Created vendor: ${ctr.name}`);
     }
   }
 

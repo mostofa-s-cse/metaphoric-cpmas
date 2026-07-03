@@ -59,13 +59,13 @@ export default async function ReportsPage() {
     { label: 'Materials Cost', amount: getExpenseByCategory('MATERIALS') },
     { label: 'Labor Cost', amount: getExpenseByCategory('LABOR') },
     { label: 'Employee Salaries', amount: getExpenseByCategory('EMPLOYEE_SALARY') },
-    { label: 'Contractor Milestones', amount: getExpenseByCategory('CONTRACTOR_PAYMENT') },
+    { label: 'Vendor Milestones', amount: getExpenseByCategory('VENDOR_PAYMENT') },
     { label: 'Office Rent & Admin', amount: getExpenseByCategory('OFFICE_RENT') },
     { label: 'Utilities & Internet', amount: getExpenseByCategory('UTILITIES') },
     { label: 'Transportation Costs', amount: getExpenseByCategory('TRANSPORTATION') },
     { label: 'Fuel Expenses', amount: getExpenseByCategory('FUEL') },
     { label: 'Equipment Rental', amount: getExpenseByCategory('EQUIPMENT_RENTAL') },
-    { label: 'Other/Miscellaneous Overheads', amount: cashOuts.filter((co) => !['MATERIALS', 'LABOR', 'CONTRACTOR_PAYMENT', 'EMPLOYEE_SALARY', 'OFFICE_RENT', 'UTILITIES', 'TRANSPORTATION', 'FUEL', 'EQUIPMENT_RENTAL'].includes(co.expenseCategory)).reduce((sum, co) => sum + co.amount, 0) },
+    { label: 'Other/Miscellaneous Overheads', amount: cashOuts.filter((co) => !['MATERIALS', 'LABOR', 'VENDOR_PAYMENT', 'EMPLOYEE_SALARY', 'OFFICE_RENT', 'UTILITIES', 'TRANSPORTATION', 'FUEL', 'EQUIPMENT_RENTAL'].includes(co.expenseCategory)).reduce((sum, co) => sum + co.amount, 0) },
   ];
 
   const totalCostFromCategories = plCategories.reduce((sum, cat) => sum + cat.amount, 0);
@@ -79,11 +79,11 @@ export default async function ReportsPage() {
     const revenue = p.cashIns.reduce((sum, ci) => sum + ci.amount, 0) || p.estimatedBudget;
     const materialCost = p.cashOuts.filter((co) => co.expenseCategory === 'MATERIALS').reduce((sum, co) => sum + co.amount, 0);
     const laborCost = p.cashOuts.filter((co) => co.expenseCategory === 'LABOR').reduce((sum, co) => sum + co.amount, 0);
-    const contractorCost = p.cashOuts.filter((co) => co.expenseCategory === 'CONTRACTOR_PAYMENT').reduce((sum, co) => sum + co.amount, 0);
+    const vendorCost = p.cashOuts.filter((co) => co.expenseCategory === 'VENDOR_PAYMENT').reduce((sum, co) => sum + co.amount, 0);
     const salaryCost = p.cashOuts.filter((co) => co.expenseCategory === 'EMPLOYEE_SALARY').reduce((sum, co) => sum + co.amount, 0);
-    const otherCost = p.cashOuts.filter((co) => !['MATERIALS', 'LABOR', 'CONTRACTOR_PAYMENT', 'EMPLOYEE_SALARY'].includes(co.expenseCategory)).reduce((sum, co) => sum + co.amount, 0);
+    const otherCost = p.cashOuts.filter((co) => !['MATERIALS', 'LABOR', 'VENDOR_PAYMENT', 'EMPLOYEE_SALARY'].includes(co.expenseCategory)).reduce((sum, co) => sum + co.amount, 0);
 
-    const totalCost = materialCost + laborCost + contractorCost + salaryCost + otherCost;
+    const totalCost = materialCost + laborCost + vendorCost + salaryCost + otherCost;
     const grossProfit = revenue - totalCost;
     const margin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
 

@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
   },
   {
     name: 'Vendor',
-    href: '/dashboard/contractors',
+    href: '/dashboard/vendor',
     icon: Briefcase,
     roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'],
   },

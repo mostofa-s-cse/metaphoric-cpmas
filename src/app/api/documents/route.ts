@@ -14,7 +14,7 @@ export async function GET() {
       include: {
         project: { select: { name: true, code: true } },
         supplier: { select: { name: true } },
-        contractor: { select: { name: true } },
+        vendor: { select: { name: true } },
       },
     });
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, fileType, category, projectId, supplierId, contractorId, description, mockUrl } = body;
+    const { name, fileType, category, projectId, supplierId, vendorId, description, mockUrl } = body;
 
     if (!name || !fileType || !category) {
       return NextResponse.json({ error: 'Name, File Type and Category are required' }, { status: 400 });
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         url: docUrl,
         projectId: projectId || null,
         supplierId: supplierId || null,
-        contractorId: contractorId || null,
+        vendorId: vendorId || null,
         description,
       },
     });

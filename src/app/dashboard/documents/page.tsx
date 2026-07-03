@@ -14,7 +14,7 @@ import {
   useGetDocumentsQuery,
   useGetProjectsQuery,
   useGetSuppliersQuery,
-  useGetContractorsQuery,
+  useGetVendorsQuery,
   useCreateDocumentMutation,
   useDeleteDocumentMutation,
   ApiDocument,
@@ -46,17 +46,17 @@ export default function DocumentsPage() {
   const [projectFilter, setProjectFilter] = useState('ALL');
 
   // Queries & Mutations
-  const { data: docData, isLoading: isFetchingDocs, error: docError } = useGetDocumentsQuery();
+  const { data: docData, isLoading: isFetchingDocs, error: docError, refetch: refetchDocs } = useGetDocumentsQuery();
   const { data: prjData } = useGetProjectsQuery();
   const { data: supData } = useGetSuppliersQuery();
-  const { data: ctrData } = useGetContractorsQuery();
+  const { data: ctrData } = useGetVendorsQuery();
   const [createDocument, { isLoading: isCreating }] = useCreateDocumentMutation();
   const [deleteDocument] = useDeleteDocumentMutation();
 
   const documents = docData?.documents || [];
   const projects = prjData?.projects || [];
   const suppliers = supData?.suppliers || [];
-  const contractors = ctrData?.contractors || [];
+  const vendors = ctrData?.vendors || [];
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -83,7 +83,7 @@ export default function DocumentsPage() {
       category: 'CONTRACT',
       projectId: '',
       supplierId: '',
-      contractorId: '',
+      vendorId: '',
       description: '',
     },
     mode: 'onBlur',
@@ -97,7 +97,7 @@ export default function DocumentsPage() {
       category: 'CONTRACT',
       projectId: '',
       supplierId: '',
-      contractorId: '',
+      vendorId: '',
       description: '',
     });
     setSelectedFile(null);
@@ -132,11 +132,12 @@ export default function DocumentsPage() {
         fileType: selectedFile.name.split('.').pop()?.toUpperCase() || values.fileType,
         projectId: values.projectId || null,
         supplierId: values.supplierId || null,
-        contractorId: values.contractorId || null,
+        vendorId: values.vendorId || null,
       };
 
       await createDocument(payload).unwrap();
       showSuccessToast('Document record uploaded');
+      refetchDocs();
       setIsModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.message || err?.data?.error || 'Failed to upload document');
@@ -153,6 +154,7 @@ export default function DocumentsPage() {
     try {
       await deleteDocument(id).unwrap();
       showSuccessToast('Document deleted successfully');
+      refetchDocs();
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete document');
     }
@@ -327,10 +329,10 @@ export default function DocumentsPage() {
                         <span className="truncate">Supplier: {doc.supplier.name}</span>
                       </div>
                     )}
-                    {doc.contractor && (
+                    {doc.vendor && (
                       <div className="flex items-center text-[10px] text-slate-500 gap-1.5 font-medium">
                         <Briefcase className="h-3 w-3 shrink-0 text-slate-600" />
-                        <span className="truncate">Contractor: {doc.contractor.name}</span>
+                        <span className="truncate">Vendor: {doc.vendor.name}</span>
                       </div>
                     )}
                   </div>
@@ -464,15 +466,15 @@ export default function DocumentsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Contractor</label>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Vendor</label>
                   <select
-                    {...register('contractorId')}
+                    {...register('vendorId')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="">No Contractor Link</option>
-                    {contractors.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
+                    <option value="">No Vendor Link</option>
+                    {vendors.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
                   </select>

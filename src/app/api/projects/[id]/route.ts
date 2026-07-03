@@ -23,7 +23,7 @@ export async function GET(
         cashOuts: {
           include: {
             supplier: true,
-            contractor: true,
+            vendor: true,
             employee: true,
             labour: true
           }

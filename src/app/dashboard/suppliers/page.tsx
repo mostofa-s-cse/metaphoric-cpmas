@@ -42,7 +42,7 @@ export default function SuppliersPage() {
   const { success: showSuccessToast, error: showErrorToast } = useToast();
 
   // Queries & Mutations
-  const { data, isLoading: isFetching, error: fetchError } = useGetSuppliersQuery();
+  const { data, isLoading: isFetching, error: fetchError, refetch: refetchSuppliers } = useGetSuppliersQuery();
   const [createSupplier, { isLoading: isCreating }] = useCreateSupplierMutation();
   const [updateSupplier, { isLoading: isUpdating }] = useUpdateSupplierMutation();
   const [deleteSupplier, { isLoading: isDeleting }] = useDeleteSupplierMutation();
@@ -141,6 +141,7 @@ export default function SuppliersPage() {
     try {
       await deleteSupplier(supplierToDelete).unwrap();
       showSuccessToast('Supplier deleted successfully');
+      refetchSuppliers();
       if (selectedSupplier?.id === supplierToDelete) {
         setIsHistoryOpen(false);
       }
@@ -160,9 +161,11 @@ export default function SuppliersPage() {
       if (modalMode === 'create') {
         await createSupplier(payload).unwrap();
         showSuccessToast('Supplier profile created');
+        refetchSuppliers();
       } else if (selectedSupplierId) {
         await updateSupplier({ id: selectedSupplierId, ...payload }).unwrap();
         showSuccessToast('Supplier profile updated');
+        refetchSuppliers();
       }
       setIsModalOpen(false);
     } catch (err: any) {

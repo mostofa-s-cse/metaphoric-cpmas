@@ -11,14 +11,14 @@ export default async function DashboardPage() {
     completedProjects: 0,
     totalClients: 0,
     totalSuppliers: 0,
-    totalContractors: 0,
+    totalVendors: 0,
     totalEmployees: 0,
     totalLabour: 0,
     totalCashIn: 0,
     totalCashOut: 0,
     netProfit: 0,
     supplierDue: 0,
-    contractorDue: 0,
+    vendorDue: 0,
     salaryDue: 0,
     cashBalance: 0,
     monthlyRevenue: 0,
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
 
     // 2. Stakeholders count
     summary.totalSuppliers = await prisma.supplier.count();
-    summary.totalContractors = await prisma.contractor.count();
+    summary.totalVendors = await prisma.vendor.count();
     summary.totalEmployees = await prisma.employee.count();
     summary.totalLabour = await prisma.labour.count();
 
@@ -58,8 +58,8 @@ export default async function DashboardPage() {
     const suppliers = await prisma.supplier.findMany();
     summary.supplierDue = suppliers.reduce((sum, s) => sum + s.currentDue, 0);
 
-    const contractors = await prisma.contractor.findMany();
-    summary.contractorDue = contractors.reduce((sum, c) => sum + c.dueAmount, 0);
+    const vendors = await prisma.vendor.findMany();
+    summary.vendorDue = vendors.reduce((sum, v) => sum + v.dueAmount, 0);
 
     const salaries = await prisma.salary.findMany();
     summary.salaryDue = salaries.reduce((sum, s) => sum + s.dueAmount, 0);
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
         { category: 'MATERIALS', value: 0 },
         { category: 'LABOR', value: 0 },
         { category: 'EMPLOYEE_SALARY', value: 0 },
-        { category: 'CONTRACTOR_PAYMENT', value: 0 },
+        { category: 'VENDOR_PAYMENT', value: 0 },
         { category: 'OFFICE_RENT', value: 0 },
         { category: 'UTILITIES', value: 0 },
       ];
@@ -131,14 +131,14 @@ export default async function DashboardPage() {
     summary.cashBalance = 470000;
     summary.netProfit = 470000;
     summary.supplierDue = 20400;
-    summary.contractorDue = 250000;
+    summary.vendorDue = 250000;
     summary.salaryDue = 4500;
     
     expenseBreakdown = [
       { category: 'MATERIALS', value: 520000 },
       { category: 'LABOR', value: 240000 },
       { category: 'EMPLOYEE_SALARY', value: 95000 },
-      { category: 'CONTRACTOR_PAYMENT', value: 80000 },
+      { category: 'VENDOR_PAYMENT', value: 80000 },
       { category: 'OFFICE_RENT', value: 25000 },
       { category: 'UTILITIES', value: 8000 },
       { category: 'MISCELLANEOUS', value: 12000 },

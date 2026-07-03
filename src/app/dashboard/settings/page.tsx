@@ -60,9 +60,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLE_DESCRIPTIONS: Record<string, { icon: React.ComponentType<{ className?: string }>; desc: string; color: string }> = {
   SUPER_ADMIN: { icon: Crown, desc: 'You have unrestricted access to all modules, users, and system settings.', color: 'text-amber-400' },
-  ADMIN: { icon: Shield, desc: 'You can manage all projects, financials, suppliers, contractors, and view reports.', color: 'text-cyan-400' },
+  ADMIN: { icon: Shield, desc: 'You can manage all projects, financials, suppliers, vendors, and view reports.', color: 'text-cyan-400' },
   ACCOUNTANT: { icon: UserCheck, desc: 'You have access to financial records, transactions, and can generate reports.', color: 'text-green-400' },
-  PROJECT_MANAGER: { icon: UserCog, desc: 'You can manage projects, contractors, materials, and field labor operations.', color: 'text-blue-400' },
+  PROJECT_MANAGER: { icon: UserCog, desc: 'You can manage projects, vendors, materials, and field labor operations.', color: 'text-blue-400' },
   DATA_ENTRY_OPERATOR: { icon: Users2, desc: 'You can enter transactions, upload documents, and handle basic data operations.', color: 'text-slate-400' },
 };
 

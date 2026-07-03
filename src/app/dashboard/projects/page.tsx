@@ -49,7 +49,7 @@ export default function ProjectsPage() {
   const { success: showSuccessToast, error: showErrorToast } = useToast();
 
   // Queries & Mutations
-  const { data, isLoading: isFetching, error: fetchError } = useGetProjectsQuery();
+  const { data, isLoading: isFetching, error: fetchError, refetch } = useGetProjectsQuery();
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
@@ -163,6 +163,7 @@ export default function ProjectsPage() {
     try {
       await deleteProject(projectToDelete).unwrap();
       showSuccessToast('Project deleted successfully');
+      refetch();
       if (selectedProject?.id === projectToDelete) {
         setIsDetailsOpen(false);
       }
@@ -182,9 +183,11 @@ export default function ProjectsPage() {
       if (modalMode === 'create') {
         await createProject(payload).unwrap();
         showSuccessToast('Project created successfully');
+        refetch();
       } else if (selectedProjectId) {
         await updateProject({ id: selectedProjectId, ...payload }).unwrap();
         showSuccessToast('Project updated successfully');
+        refetch();
       }
       setIsModalOpen(false);
     } catch (err: any) {
@@ -213,8 +216,8 @@ export default function ProjectsPage() {
     const laborCost = cashOuts
       .filter((co: any) => co.expenseCategory === 'LABOR')
       .reduce((sum: number, co: any) => sum + co.amount, 0);
-    const contractorCost = cashOuts
-      .filter((co: any) => co.expenseCategory === 'CONTRACTOR_PAYMENT')
+    const vendorCost = cashOuts
+      .filter((co: any) => co.expenseCategory === 'VENDOR_PAYMENT')
       .reduce((sum: number, co: any) => sum + co.amount, 0);
     const salaryCost = cashOuts
       .filter((co: any) => co.expenseCategory === 'EMPLOYEE_SALARY')
@@ -222,13 +225,13 @@ export default function ProjectsPage() {
     const otherCost = cashOuts
       .filter(
         (co: any) =>
-          !['MATERIALS', 'LABOR', 'CONTRACTOR_PAYMENT', 'EMPLOYEE_SALARY'].includes(
+          !['MATERIALS', 'LABOR', 'VENDOR_PAYMENT', 'EMPLOYEE_SALARY'].includes(
             co.expenseCategory
           )
       )
       .reduce((sum: number, co: any) => sum + co.amount, 0);
 
-    const totalCost = materialsCost + laborCost + contractorCost + salaryCost + otherCost;
+    const totalCost = materialsCost + laborCost + vendorCost + salaryCost + otherCost;
     const grossProfit = revenue - totalCost;
     const netProfit = grossProfit;
     const profitPercentage = revenue > 0 ? (netProfit / revenue) * 100 : 0;
@@ -237,7 +240,7 @@ export default function ProjectsPage() {
       revenue,
       materialsCost,
       laborCost,
-      contractorCost,
+      vendorCost,
       salaryCost,
       otherCost,
       totalCost,
@@ -532,7 +535,7 @@ export default function ProjectsPage() {
                   <span className="text-base font-bold text-slate-100">
                     {formatCurrency(profitability.totalCost)}
                   </span>
-                  <p className="text-[9px] text-slate-500 mt-0.5">Material + Labor + Contractor + Salary</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">Material + Labor + Vendor + Salary</p>
                 </div>
 
                 <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
@@ -593,10 +596,10 @@ export default function ProjectsPage() {
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-2">
                       <Briefcase className="h-3.5 w-3.5 text-slate-500" />
-                      Contractor Payments:
+                      Vendor Payments:
                     </span>
                     <span className="font-bold text-slate-200">
-                      {formatCurrency(profitability.contractorCost)}
+                      {formatCurrency(profitability.vendorCost)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
