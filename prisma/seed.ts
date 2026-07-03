@@ -51,6 +51,7 @@ async function main() {
       expectedCompletionDate: new Date('2027-06-30'),
       estimatedBudget: 5000000.0,
       status: 'RUNNING' as const,
+      projectType: 'CONSTRUCTION' as const,
       description: 'A 15-story premium commercial building with mixed retail and office spaces.',
     },
     {
@@ -63,6 +64,7 @@ async function main() {
       expectedCompletionDate: new Date('2027-12-31'),
       estimatedBudget: 3200000.0,
       status: 'PLANNING' as const,
+      projectType: 'SUPERVISION' as const,
       description: 'A gated community containing 45 eco-friendly residential villas.',
     },
     {
@@ -75,6 +77,7 @@ async function main() {
       expectedCompletionDate: new Date('2026-05-10'),
       estimatedBudget: 12000000.0,
       status: 'COMPLETED' as const,
+      projectType: 'CONSTRUCTION' as const,
       description: 'Public infrastructure bridge project spanning 1.2 kilometers.',
     },
   ];

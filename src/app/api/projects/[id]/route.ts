@@ -71,6 +71,7 @@ export async function PUT(
       expectedCompletionDate,
       estimatedBudget,
       status,
+      projectType,
       description,
     } = body;
 
@@ -102,6 +103,7 @@ export async function PUT(
         expectedCompletionDate: expectedCompletionDate ? new Date(expectedCompletionDate) : undefined,
         estimatedBudget: estimatedBudget ? parseFloat(estimatedBudget) : undefined,
         status: status || undefined,
+        projectType: projectType || undefined,
         description: description !== undefined ? description : undefined,
       },
     });

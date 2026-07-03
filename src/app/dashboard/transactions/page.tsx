@@ -497,6 +497,11 @@ export default function TransactionsPage() {
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="" disabled>Select Category...</option>
+                    <option value="SIGNING_AGREEMENT">Signing Agreement</option>
+                    <option value="MATERIAL_PREPS">Material preps</option>
+                    <option value="LABER_PREPS">Laber preps</option>
+                    <option value="RUNNING_BILL">Running Bill</option>
+                    <option value="FINAL_BILL">Final Bill</option>
                     <option value="CLIENT_PAYMENT">Client Progress Invoice</option>
                     <option value="ADVANCE_PAYMENT">Project Mobilization Advance</option>
                     <option value="INSTALLMENT">Periodic Installment</option>
@@ -681,6 +686,11 @@ export default function TransactionsPage() {
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
                     <option value="" disabled>Select Category...</option>
+                    <option value="SIGNING_AGREEMENT">Signing Agreement</option>
+                    <option value="MATERIAL_PREPS">Material preps</option>
+                    <option value="LABER_PREPS">Laber preps</option>
+                    <option value="RUNNING_BILL">Running Bill</option>
+                    <option value="FINAL_BILL">Final Bill</option>
                     <option value="MATERIALS">Raw Materials Purchase</option>
                     <option value="LABOR">Site Labor Daily Wages</option>
                     <option value="CONTRACTOR_PAYMENT">Subcontractor Payment Milestone</option>

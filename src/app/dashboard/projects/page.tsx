@@ -97,6 +97,7 @@ export default function ProjectsPage() {
       expectedCompletionDate: '',
       estimatedBudget: '',
       status: 'PLANNING',
+      projectType: 'CONSTRUCTION',
       description: '',
     },
     mode: 'onBlur',
@@ -125,6 +126,7 @@ export default function ProjectsPage() {
       expectedCompletionDate: '',
       estimatedBudget: '',
       status: 'PLANNING',
+      projectType: 'CONSTRUCTION',
       description: '',
     });
     setIsModalOpen(true);
@@ -144,6 +146,7 @@ export default function ProjectsPage() {
       expectedCompletionDate: new Date(project.expectedCompletionDate).toISOString().split('T')[0],
       estimatedBudget: project.estimatedBudget.toString(),
       status: project.status,
+      projectType: project.projectType,
       description: project.description || '',
     });
     setIsModalOpen(true);
@@ -280,6 +283,36 @@ export default function ProjectsPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
+  const getProjectTypeLabel = (type: string) => {
+    switch (type) {
+      case 'CONSULTANCY':
+        return 'Consultancy';
+      case 'SUPERVISION':
+        return 'Supervision';
+      case 'CONSTRUCTION':
+        return 'Construction';
+      case 'SUPPLYING':
+        return 'Supplying';
+      default:
+        return type || 'N/A';
+    }
+  };
+
+  const getProjectTypeColor = (type: string) => {
+    switch (type) {
+      case 'CONSULTANCY':
+        return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
+      case 'SUPERVISION':
+        return 'text-purple-400 border-purple-500/20 bg-purple-500/5';
+      case 'CONSTRUCTION':
+        return 'text-sky-400 border-sky-500/20 bg-sky-500/5';
+      case 'SUPPLYING':
+        return 'text-teal-400 border-teal-500/20 bg-teal-500/5';
+      default:
+        return 'text-slate-450 border-slate-500/20 bg-slate-500/5';
+    }
+  };
+
   const isBusy = isCreating || isUpdating;
 
   return (
@@ -366,94 +399,94 @@ export default function ProjectsPage() {
                 <tr className="border-b border-slate-800 bg-slate-900/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   <th className="py-4.5 px-6">Code &amp; Name</th>
                   <th className="py-4.5 px-4">Client Contact</th>
-                  <th className="py-4.5 px-4">Location</th>
-                  <th className="py-4.5 px-4">Timeframe</th>
-                  <th className="py-4.5 px-4">Budget</th>
-                  <th className="py-4.5 px-4">Status</th>
+                  <th className="py-4.5 px-4">Type</th>
+                  <th className="py-4.5 px-4 text-right">Total Amount</th>
+                  <th className="py-4.5 px-4 text-right">Paid Amount</th>
+                  <th className="py-4.5 px-4 text-right">Due Amount</th>
+                  <th className="py-4.5 px-4 text-center">Status</th>
                   <th className="py-4.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-xs">
-                {paginatedProjects.map((project) => (
-                  <tr
-                    key={project.id}
-                    onClick={() => handleProjectClick(project)}
-                    className="hover:bg-slate-900/40 transition-colors cursor-pointer group"
-                  >
-                    <td className="py-4 px-6 max-w-xs">
-                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">
-                        {project.code}
-                      </span>
-                      <h4 className="font-bold text-slate-200 mt-0.5 group-hover:text-cyan-300 transition-colors truncate">
-                        {project.name}
-                      </h4>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="font-semibold text-slate-300 block truncate w-32">
-                        {project.clientName}
-                      </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        {project.clientContactNumber}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-slate-400">
-                      <div className="flex items-center gap-1.5 truncate w-36">
-                        <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                        <span>{project.projectLocation}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-slate-400">
-                      <div className="flex items-center gap-1.5 text-[10px]">
-                        <Calendar className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                        <span>
-                          {new Date(project.startDate).toLocaleDateString(undefined, {
-                            month: 'short',
-                            year: 'numeric',
-                          })}{' '}
-                          -{' '}
-                          {new Date(project.expectedCompletionDate).toLocaleDateString(undefined, {
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                {paginatedProjects.map((project) => {
+                  const paidAmount = project.cashIns?.reduce((sum: number, ci: any) => sum + ci.amount, 0) || 0;
+                  const dueAmount = project.estimatedBudget - paidAmount;
+                  return (
+                    <tr
+                      key={project.id}
+                      onClick={() => handleProjectClick(project)}
+                      className="hover:bg-slate-900/40 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-4 px-6 max-w-xs">
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">
+                          {project.code}
                         </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 font-bold text-slate-200">
-                      {formatCurrency(project.estimatedBudget)}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${getStatusColor(
-                          project.status
-                        )}`}
-                      >
-                        {project.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {(user?.role === 'SUPER_ADMIN' ||
-                          user?.role === 'ADMIN' ||
-                          user?.role === 'PROJECT_MANAGER') && (
-                          <button
-                            onClick={(e) => handleOpenEdit(project, e)}
-                            className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                        )}
-                        {user?.role === 'SUPER_ADMIN' && (
-                          <button
-                            onClick={(e) => handleDeleteClick(project.id, e)}
-                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        <h4 className="font-bold text-slate-200 mt-0.5 group-hover:text-cyan-300 transition-colors truncate">
+                          {project.name}
+                        </h4>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="font-semibold text-slate-300 block truncate w-32">
+                          {project.clientName}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">
+                          {project.clientContactNumber}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${getProjectTypeColor(
+                            project.projectType
+                          )}`}
+                        >
+                          {getProjectTypeLabel(project.projectType)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 font-bold text-slate-200 text-right">
+                        {formatCurrency(project.estimatedBudget)}
+                      </td>
+                      <td className="py-4 px-4 font-bold text-emerald-400 text-right">
+                        {formatCurrency(paidAmount)}
+                      </td>
+                      <td className="py-4 px-4 font-bold text-right">
+                        <span className={dueAmount > 0 ? 'text-rose-450' : 'text-emerald-400'}>
+                          {formatCurrency(dueAmount)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${getStatusColor(
+                            project.status
+                          )}`}
+                        >
+                          {project.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {(user?.role === 'SUPER_ADMIN' ||
+                            user?.role === 'ADMIN' ||
+                            user?.role === 'PROJECT_MANAGER') && (
+                            <button
+                              onClick={(e) => handleOpenEdit(project, e)}
+                              className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          {user?.role === 'SUPER_ADMIN' && (
+                            <button
+                              onClick={(e) => handleDeleteClick(project.id, e)}
+                              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -626,6 +659,12 @@ export default function ProjectsPage() {
                   {selectedProject.clientContactNumber}
                 </p>
                 <p>
+                  <span className="font-bold text-slate-300">Project Type:</span>{' '}
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${getProjectTypeColor(selectedProject.projectType)}`}>
+                    {getProjectTypeLabel(selectedProject.projectType)}
+                  </span>
+                </p>
+                <p>
                   <span className="font-bold text-slate-300">Project Location:</span>{' '}
                   {selectedProject.projectLocation}
                 </p>
@@ -792,22 +831,42 @@ export default function ProjectsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Current Status</label>
-                <select
-                  {...register('status')}
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    errors.status
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
-                >
-                  <option value="PLANNING">PLANNING</option>
-                  <option value="RUNNING">RUNNING</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                  <option value="ARCHIVED">ARCHIVED</option>
-                </select>
-                {errors.status && <p className="text-rose-400 text-[10px] mt-1">{errors.status.message}</p>}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Current Status</label>
+                  <select
+                    {...register('status')}
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.status
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  >
+                    <option value="PLANNING">PLANNING</option>
+                    <option value="RUNNING">RUNNING</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                  {errors.status && <p className="text-rose-400 text-[10px] mt-1">{errors.status.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2">Project Type</label>
+                  <select
+                    {...register('projectType')}
+                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                      errors.projectType
+                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                    }`}
+                  >
+                    <option value="CONSULTANCY">Consultancy</option>
+                    <option value="SUPERVISION">Supervision</option>
+                    <option value="CONSTRUCTION">Construction</option>
+                    <option value="SUPPLYING">Supplying</option>
+                  </select>
+                  {errors.projectType && <p className="text-rose-400 text-[10px] mt-1">{errors.projectType.message}</p>}
+                </div>
               </div>
 
               <div>

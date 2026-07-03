@@ -43,6 +43,7 @@ export default function DocumentsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [projectFilter, setProjectFilter] = useState('ALL');
 
   // Queries & Mutations
   const { data: docData, isLoading: isFetchingDocs, error: docError } = useGetDocumentsQuery();
@@ -179,11 +180,17 @@ export default function DocumentsPage() {
       (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesCategory = categoryFilter === 'ALL' || doc.category === categoryFilter;
+    const matchesProject =
+      projectFilter === 'ALL'
+        ? true
+        : projectFilter === 'GENERAL'
+        ? !doc.projectId
+        : doc.projectId === projectFilter;
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesProject;
   });
 
-  useEffect(() => { setPage(1); }, [searchTerm, categoryFilter]);
+  useEffect(() => { setPage(1); }, [searchTerm, categoryFilter, projectFilter]);
 
   const paginatedDocuments = filteredDocuments.slice((page - 1) * limit, page * limit);
 
@@ -224,6 +231,20 @@ export default function DocumentsPage() {
             className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
           />
         </div>
+
+        <select
+          value={projectFilter}
+          onChange={(e) => setProjectFilter(e.target.value)}
+          className="px-3.5 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-450 focus:outline-none text-xs transition-all cursor-pointer md:w-[220px]"
+        >
+          <option value="ALL">All Projects</option>
+          <option value="GENERAL">General Corporate (No Project)</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} - {p.name}
+            </option>
+          ))}
+        </select>
 
         <div className="flex flex-wrap gap-2">
           {['ALL', 'CONTRACT', 'INVOICE', 'CHALLAN', 'QUOTATION', 'OTHER'].map((cat) => (

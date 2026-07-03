@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
         include: {
           materials: true,
           cashOuts: true,
+          cashIns: true,
           labours: true,
         },
       }),
@@ -48,10 +49,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       name, code, clientName, clientContactNumber, projectLocation,
-      startDate, expectedCompletionDate, estimatedBudget, status, description,
+      startDate, expectedCompletionDate, estimatedBudget, status, projectType, description,
     } = body;
 
-    if (!name || !code || !clientName || !clientContactNumber || !projectLocation || !startDate || !expectedCompletionDate || !estimatedBudget) {
+    if (!name || !code || !clientName || !clientContactNumber || !projectLocation || !startDate || !expectedCompletionDate || !estimatedBudget || !projectType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
         expectedCompletionDate: new Date(expectedCompletionDate),
         estimatedBudget: parseFloat(estimatedBudget),
         status: status || 'PLANNING',
+        projectType,
         description,
       },
     });

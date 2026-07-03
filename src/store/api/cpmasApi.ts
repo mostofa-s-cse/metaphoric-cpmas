@@ -25,6 +25,7 @@ export interface ApiUser {
 }
 
 export type ProjectStatus = 'PLANNING' | 'RUNNING' | 'COMPLETED' | 'ARCHIVED';
+export type ProjectType = 'CONSULTANCY' | 'SUPERVISION' | 'CONSTRUCTION' | 'SUPPLYING';
 
 export interface ApiProject {
   id: string;
@@ -37,6 +38,7 @@ export interface ApiProject {
   expectedCompletionDate: string;
   estimatedBudget: number;
   status: ProjectStatus;
+  projectType: ProjectType;
   description: string | null;
   materials?: any[];
   cashOuts?: any[];
@@ -157,6 +159,9 @@ export interface ApiDocument {
   description: string | null;
   fileType: string;
   category: string;
+  projectId?: string | null;
+  supplierId?: string | null;
+  contractorId?: string | null;
   project?: { name: string; code: string } | null;
   supplier?: { name: string } | null;
   contractor?: { name: string } | null;

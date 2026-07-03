@@ -98,6 +98,7 @@ export type UpdateProfileFormValues = z.infer<typeof updateProfileSchema>;
 // PROJECTS
 // ─────────────────────────────────────────────
 export const projectStatusEnum = z.enum(['PLANNING', 'RUNNING', 'COMPLETED', 'ARCHIVED']);
+export const projectTypeEnum = z.enum(['CONSULTANCY', 'SUPERVISION', 'CONSTRUCTION', 'SUPPLYING']);
 
 export const projectSchema = z.object({
   name: z
@@ -131,6 +132,7 @@ export const projectSchema = z.object({
       message: 'Budget must be a positive number',
     }),
   status: projectStatusEnum,
+  projectType: projectTypeEnum,
   description: z.string().max(1000, 'Description too long').optional().or(z.literal('')),
 }).refine(
   (data) => new Date(data.expectedCompletionDate) > new Date(data.startDate),
