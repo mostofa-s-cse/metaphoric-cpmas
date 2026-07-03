@@ -33,14 +33,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, fileType, category, projectId, supplierId, vendorId, description, mockUrl } = body;
+    const { name, url, fileType, category, projectId, supplierId, vendorId, description, mockUrl } = body;
 
     if (!name || !fileType || !category) {
       return NextResponse.json({ error: 'Name, File Type and Category are required' }, { status: 400 });
     }
 
-    // Generate a default mock URL if not provided
-    const docUrl = mockUrl || `/public/uploads/${name.toLowerCase().replace(/\s+/g, '_')}.${fileType.toLowerCase()}`;
+    // Generate a default mock URL if not provided (defaulting to /uploads/ relative format)
+    const docUrl = url || mockUrl || `/uploads/${name.toLowerCase().replace(/\s+/g, '_')}.${fileType.toLowerCase()}`;
 
     const document = await prisma.document.create({
       data: {

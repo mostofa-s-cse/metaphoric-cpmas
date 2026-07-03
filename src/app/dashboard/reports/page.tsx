@@ -145,7 +145,7 @@ export default function ReportsPage() {
       doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(15, 23, 42); // slate-900
-      text('CPMAS — Financial Report', margin, 10);
+      text('Metaphoric Architect — Financial Report', margin, 10);
       
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
@@ -292,10 +292,11 @@ export default function ReportsPage() {
         doc.setFontSize(7);
         doc.setTextColor(100, 116, 139);
         doc.setFont('helvetica', 'normal');
-        text(`CPMAS Financial Statement — Page ${i} of ${pageCount}`, W / 2, 290, { align: 'center' });
+        text(`Metaphoric Architect Financial Statement — Page ${i} of ${pageCount}`, W / 2, 290, { align: 'center' });
       }
 
-      doc.save(`CPMAS-Report-${projectLabel.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+      const blobUrl = doc.output('bloburl');
+      window.open(blobUrl, '_blank');
     } catch (err) {
       console.error('PDF generation failed:', err);
     } finally {

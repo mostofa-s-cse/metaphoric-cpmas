@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Pagination } from '@/components/ui/Pagination';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -35,6 +36,7 @@ import {
   FileImage,
   ExternalLink,
   Upload,
+  Download,
 } from 'lucide-react';
 
 export default function DocumentsPage() {
@@ -67,6 +69,10 @@ export default function DocumentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [viewDoc, setViewDoc] = useState<ApiDocument | null>(null);
+
+  // Delete confirm state
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // React Hook Form setup
   const {
@@ -146,17 +152,22 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to permanently delete this document record?')) {
-      return;
-    }
+  const handleDeleteClick = (id: string) => {
+    setDeleteId(id);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await deleteDocument(id).unwrap();
-      showSuccessToast('Document deleted successfully');
+      setIsDeleting(true);
+      await deleteDocument(deleteId).unwrap();
+      showSuccessToast('Document record and physical file deleted successfully');
       refetchDocs();
+      setDeleteId(null);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to delete document');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -339,17 +350,27 @@ export default function DocumentsPage() {
                 </div>
 
                 <div className="mt-4 pt-3.5 border-t border-slate-800/30 flex items-center justify-between">
-                  <button
-                    onClick={() => setViewDoc(doc)}
-                    className="inline-flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    <span>View File</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setViewDoc(doc)}
+                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>View File</span>
+                    </button>
+                    <a
+                      href={doc.url.replace(/^\/public\//, '/')}
+                      download={doc.name}
+                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Download</span>
+                    </a>
+                  </div>
 
                   {user?.role === 'SUPER_ADMIN' && (
                     <button
-                      onClick={() => handleDelete(doc.id)}
+                      onClick={() => handleDeleteClick(doc.id)}
                       className="p-1 text-slate-500 hover:text-rose-455 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10 rounded transition-all cursor-pointer"
                       title="Delete document"
                     >
@@ -541,24 +562,34 @@ export default function DocumentsPage() {
                 <FileText className="h-4.5 w-4.5 text-cyan-400" />
                 {viewDoc.name}
               </h2>
-              <button
-                onClick={() => setViewDoc(null)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                <a
+                  href={viewDoc.url.replace(/^\/public\//, '/')}
+                  download={viewDoc.name}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700/80 rounded-lg text-slate-350 hover:text-slate-100 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Download</span>
+                </a>
+                <button
+                  onClick={() => setViewDoc(null)}
+                  className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-auto bg-slate-950/50 p-4 flex items-center justify-center">
-              {viewDoc.fileType === 'PDF' ? (
+              {viewDoc.fileType?.toUpperCase() === 'PDF' ? (
                 <iframe
-                  src={viewDoc.url}
+                  src={viewDoc.url.replace(/^\/public\//, '/')}
                   className="w-full h-full rounded-xl border border-slate-800"
                   title={viewDoc.name}
                 />
-              ) : viewDoc.fileType === 'IMAGE' ? (
+              ) : ['IMAGE', 'PNG', 'JPG', 'JPEG', 'GIF', 'WEBP'].includes(viewDoc.fileType?.toUpperCase()) ? (
                 <img
-                  src={viewDoc.url}
+                  src={viewDoc.url.replace(/^\/public\//, '/')}
                   alt={viewDoc.name}
                   className="max-w-full max-h-full object-contain rounded-xl"
                 />
@@ -567,7 +598,7 @@ export default function DocumentsPage() {
                   <FileText className="h-12 w-12 text-slate-600 mx-auto mb-3" />
                   <p className="text-slate-400 text-sm">Preview not available for this file type.</p>
                   <a
-                    href={viewDoc.url}
+                    href={viewDoc.url.replace(/^\/public\//, '/')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 inline-block px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold rounded-lg transition-colors"
@@ -580,6 +611,17 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
+      {/* shadcn-style Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Are you absolutely sure?"
+        description="This action cannot be undone. This will permanently delete the document record from the ledger and completely purge the physical file from the server's storage disk."
+        confirmText="Delete"
+        isConfirming={isDeleting}
+      />
     </div>
   );
 }
