@@ -76,9 +76,9 @@ export default function MaterialsPage() {
     resolver: zodResolver(materialSchema),
     defaultValues: {
       name: '',
-      category: 'Cement',
+      category: '',
       quantity: '',
-      unit: 'Bags',
+      unit: '',
       unitPrice: '',
       supplierId: '',
       projectId: '',
@@ -100,12 +100,12 @@ export default function MaterialsPage() {
 
     reset({
       name: '',
-      category: 'Cement',
+      category: '',
       quantity: '',
-      unit: 'Bags',
+      unit: '',
       unitPrice: '',
-      supplierId: suppliers[0]?.id || '',
-      projectId: projects[0]?.id || '',
+      supplierId: '',
+      projectId: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       invoiceNumber: '',
     });
@@ -398,28 +398,40 @@ export default function MaterialsPage() {
               <label className="block text-slate-400 text-xs font-semibold mb-2">Supplier</label>
               <select
                 {...register('supplierId')}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all cursor-pointer ${
+                  errors.supplierId
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
               >
+                <option value="">Select Supplier...</option>
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
               </select>
+              {errors.supplierId && <p className="text-rose-400 text-[10px] mt-1">{errors.supplierId.message}</p>}
             </div>
 
             <div>
               <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
               <select
                 {...register('projectId')}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all cursor-pointer ${
+                  errors.projectId
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
               >
+                <option value="">Select Project...</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.code} - {p.name}
                   </option>
                 ))}
               </select>
+              {errors.projectId && <p className="text-rose-400 text-[10px] mt-1">{errors.projectId.message}</p>}
             </div>
           </div>
 

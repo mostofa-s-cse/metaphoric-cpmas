@@ -2,13 +2,38 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type'); // 'in' | 'out' | null
+
+    if (type === 'in') {
+      const cashIns = await prisma.cashIn.findMany({
+        orderBy: { date: 'desc' },
+        include: { project: { select: { name: true, code: true } } },
+      });
+      return NextResponse.json({ cashIns }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    if (type === 'out') {
+      const cashOuts = await prisma.cashOut.findMany({
+        orderBy: { date: 'desc' },
+        include: {
+          project: { select: { name: true, code: true } },
+          supplier: { select: { name: true } },
+          vendor: { select: { name: true } },
+          employee: { select: { fullName: true } },
+        },
+      });
+      return NextResponse.json({ cashOuts }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    // Default: return both
     const [cashIns, cashOuts] = await Promise.all([
       prisma.cashIn.findMany({
         orderBy: { date: 'desc' },
@@ -25,7 +50,7 @@ export async function GET() {
       }),
     ]);
 
-    return NextResponse.json({ cashIns, cashOuts });
+    return NextResponse.json({ cashIns, cashOuts }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch financial ledger' }, { status: 500 });

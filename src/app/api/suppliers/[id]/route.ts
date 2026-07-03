@@ -18,12 +18,21 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, companyName, phoneNumber, email, address, currentDue, notes } = body;
+    const { name, companyName, phoneNumber, email, address, notes, assignments } = body;
 
     const supplier = await prisma.supplier.findUnique({ where: { id } });
     if (!supplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
     }
+    
+    let cAmt = 0.0;
+    let pAmt = 0.0;
+    if (assignments && Array.isArray(assignments) && assignments.length > 0) {
+      cAmt = assignments.reduce((sum: number, a: any) => sum + parseFloat(a.contractAmount || '0'), 0.0);
+      pAmt = assignments.reduce((sum: number, a: any) => sum + parseFloat(a.paidAmount || '0'), 0.0);
+    }
+    const dAmt = cAmt - pAmt;
+    const totalDue = dAmt + supplier.openingBalance;
 
     const updatedSupplier = await prisma.supplier.update({
       where: { id },
@@ -33,10 +42,29 @@ export async function PUT(
         phoneNumber: phoneNumber || undefined,
         email: email !== undefined ? email : undefined,
         address: address !== undefined ? address : undefined,
-        currentDue: currentDue !== undefined ? parseFloat(currentDue) : undefined,
+        currentDue: totalDue,
         notes: notes !== undefined ? notes : undefined,
       },
     });
+
+    if (assignments && Array.isArray(assignments)) {
+      await prisma.projectSupplier.deleteMany({ where: { supplierId: id } });
+      if (assignments.length > 0) {
+        await prisma.projectSupplier.createMany({
+          data: assignments.map((a: any) => {
+            const actAmt = parseFloat(a.contractAmount || '0');
+            const pdAmt = parseFloat(a.paidAmount || '0');
+            return {
+              supplierId: id,
+              projectId: a.projectId,
+              contractAmount: actAmt,
+              paidAmount: pdAmt,
+              dueAmount: actAmt - pdAmt,
+            };
+          }),
+        });
+      }
+    }
 
     await prisma.auditLog.create({
       data: {

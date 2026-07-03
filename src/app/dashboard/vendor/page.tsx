@@ -300,16 +300,16 @@ export default function VendorsPage() {
                   </p>
                 )}
 
-                {/* Project Badges */}
+                {/* Assigned Projects Badges */}
                 {vnd.projectAssignments && vnd.projectAssignments.length > 0 && (
                   <div className="mt-3.5 flex flex-wrap gap-1.5">
-                    {vnd.projectAssignments.map((pa) => (
+                    {vnd.projectAssignments.map((pa: any) => (
                       <span
                         key={pa.id}
                         className="text-[9px] font-bold px-2 py-1 bg-slate-950/80 border border-slate-850 text-slate-400 rounded-lg uppercase tracking-wider font-mono hover:text-cyan-400 transition-colors"
-                        title={`${pa.project.name} (Contract: ${formatCurrency(pa.contractAmount)})`}
+                        title={`${pa.project?.name || ''} (Contract: ${formatCurrency(pa.contractAmount)})`}
                       >
-                        {pa.project.code}
+                        {pa.project?.code || pa.project?.name}
                       </span>
                     ))}
                   </div>

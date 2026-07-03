@@ -60,6 +60,18 @@ export interface ApiSupplier {
   notes: string | null;
   materials?: any[];
   cashOuts?: any[];
+  projectAssignments?: {
+    id: string;
+    projectId: string;
+    supplierId: string;
+    contractAmount: number;
+    paidAmount: number;
+    dueAmount: number;
+    project: {
+      name: string;
+      code: string;
+    };
+  }[];
   createdAt: string;
 }
 
