@@ -87,7 +87,7 @@ export default function SettingsPage() {
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: { fullName: '', email: '' },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function SettingsPage() {
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { newPassword: '', confirmPassword: '' },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   const onPasswordSubmit = async (values: PasswordFormData) => {

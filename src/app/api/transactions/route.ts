@@ -131,6 +131,16 @@ export async function POST(request: Request) {
             dueAmount: { decrement: txnAmount },
           },
         });
+
+        if (projectId) {
+          await prisma.projectVendor.updateMany({
+            where: { vendorId, projectId },
+            data: {
+              paidAmount: { increment: txnAmount },
+              dueAmount: { decrement: txnAmount },
+            },
+          });
+        }
       }
 
       // Update supplier balances if supplier payment

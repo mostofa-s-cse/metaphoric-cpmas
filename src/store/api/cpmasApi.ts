@@ -75,6 +75,18 @@ export interface ApiVendor {
   dueAmount: number;
   notes: string | null;
   cashOuts?: any[];
+  projectAssignments?: {
+    id: string;
+    projectId: string;
+    vendorId: string;
+    contractAmount: number;
+    paidAmount: number;
+    dueAmount: number;
+    project: {
+      name: string;
+      code: string;
+    };
+  }[];
   createdAt: string;
 }
 
@@ -371,19 +383,17 @@ export const cpmasApi = createApi({
           : [{ type: 'Vendors', id: 'LIST' }],
     }),
 
-    createVendor: builder.mutation<{ vendor: ApiVendor }, Partial<ApiVendor>>({
+    createVendor: builder.mutation<{ vendor: ApiVendor }, any>({
       query: (body) => ({ url: '/vendors', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Vendors', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Vendors', id: 'LIST' }, 'Vendors'],
     }),
 
-    updateVendor: builder.mutation<
-      { vendor: ApiVendor },
-      { id: string } & Partial<ApiVendor>
-    >({
+    updateVendor: builder.mutation<{ vendor: ApiVendor }, any>({
       query: ({ id, ...body }) => ({ url: `/vendors/${id}`, method: 'PUT', body }),
       invalidatesTags: (_result, _err, { id }) => [
         { type: 'Vendors', id },
         { type: 'Vendors', id: 'LIST' },
+        'Vendors',
       ],
     }),
 
@@ -392,6 +402,7 @@ export const cpmasApi = createApi({
       invalidatesTags: (_result, _err, id) => [
         { type: 'Vendors', id },
         { type: 'Vendors', id: 'LIST' },
+        'Vendors',
       ],
     }),
 

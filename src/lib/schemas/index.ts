@@ -184,7 +184,9 @@ export const vendorSchema = z.object({
     .string()
     .refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, {
       message: 'Contract amount must be a non-negative number',
-    }),
+    })
+    .optional()
+    .or(z.literal('')),
   paidAmount: z
     .string()
     .refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, {
@@ -193,6 +195,15 @@ export const vendorSchema = z.object({
     .optional()
     .or(z.literal('')),
   notes: z.string().max(500).optional().or(z.literal('')),
+  assignments: z.array(z.object({
+    projectId: z.string().min(1, 'Project is required'),
+    contractAmount: z.string().refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, {
+      message: 'Contract amount must be a non-negative number',
+    }),
+    paidAmount: z.string().refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, {
+      message: 'Paid amount must be a non-negative number',
+    }).optional().or(z.literal('')),
+  })).optional(),
 });
 
 export type VendorFormValues = z.infer<typeof vendorSchema>;

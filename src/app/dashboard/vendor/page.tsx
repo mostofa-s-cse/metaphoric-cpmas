@@ -5,7 +5,7 @@
  * Powered by RTK Query, React Hook Form, and Zod schema validation.
  */
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { Modal } from '@/components/ui/Modal';
 import { Drawer } from '@/components/ui/Drawer';
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -18,6 +18,7 @@ import {
   useCreateVendorMutation,
   useUpdateVendorMutation,
   useDeleteVendorMutation,
+  useGetProjectsQuery,
   ApiVendor,
 } from '@/store/api/cpmasApi';
 import { vendorSchema, VendorFormValues } from '@/lib/schemas';
@@ -40,11 +41,13 @@ export default function VendorsPage() {
 
   // Queries & Mutations
   const { data, isLoading: isFetching, error: fetchError, refetch: refetchVendors } = useGetVendorsQuery();
+  const { data: prjData } = useGetProjectsQuery();
   const [createVendor, { isLoading: isCreating }] = useCreateVendorMutation();
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
   const [deleteVendor, { isLoading: isDeleting }] = useDeleteVendorMutation();
 
   const vendors = data?.vendors || [];
+  const projects = prjData?.projects || [];
 
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,6 +74,7 @@ export default function VendorsPage() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<VendorFormValues>({
     resolver: zodResolver(vendorSchema),
@@ -79,12 +83,16 @@ export default function VendorsPage() {
       companyName: '',
       contactNumber: '',
       address: '',
-      workType: 'Civil & Foundation',
-      contractAmount: '',
-      paidAmount: '0',
+      workType: '',
       notes: '',
+      assignments: [],
     },
-    mode: 'onChange',
+    mode: 'all',
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'assignments',
   });
 
   // Track updates to selected vendor when list refreshes
@@ -105,10 +113,9 @@ export default function VendorsPage() {
       companyName: '',
       contactNumber: '',
       address: '',
-      workType: 'Civil & Foundation',
-      contractAmount: '',
-      paidAmount: '0',
+      workType: '',
       notes: '',
+      assignments: [{ projectId: '', contractAmount: '', paidAmount: '0' }],
     });
     setIsModalOpen(true);
   };
@@ -117,15 +124,21 @@ export default function VendorsPage() {
     e.stopPropagation();
     setModalMode('edit');
     setSelectedVendorId(vnd.id);
+
+    const formAssignments = (vnd.projectAssignments || []).map((pa) => ({
+      projectId: pa.projectId,
+      contractAmount: pa.contractAmount.toString(),
+      paidAmount: pa.paidAmount.toString(),
+    }));
+
     reset({
       name: vnd.name,
       companyName: vnd.companyName || '',
       contactNumber: vnd.contactNumber,
       address: vnd.address || '',
       workType: vnd.workType,
-      contractAmount: vnd.contractAmount.toString(),
-      paidAmount: vnd.paidAmount.toString(),
       notes: vnd.notes || '',
+      assignments: formAssignments,
     });
     setIsModalOpen(true);
   };
@@ -156,18 +169,20 @@ export default function VendorsPage() {
     try {
       const payload = {
         ...values,
-        contractAmount: parseFloat(values.contractAmount),
-        paidAmount: parseFloat(values.paidAmount || '0'),
+        assignments: (values.assignments || []).map((a) => ({
+          projectId: a.projectId,
+          contractAmount: a.contractAmount,
+          paidAmount: a.paidAmount || '0',
+        })),
       };
       if (modalMode === 'create') {
         await createVendor(payload).unwrap();
         showSuccessToast('Vendor assignment registered');
-        refetchVendors();
       } else if (selectedVendorId) {
         await updateVendor({ id: selectedVendorId, ...payload }).unwrap();
         showSuccessToast('Vendor profile updated');
-        refetchVendors();
       }
+      refetchVendors();
       setIsModalOpen(false);
     } catch (err: any) {
       showErrorToast(err?.data?.error || 'Failed to save vendor profile');
@@ -210,7 +225,7 @@ export default function VendorsPage() {
             Vendor Assignments
           </h1>
           <p className="text-slate-500 text-xs mt-0.5">
-            Register subcontracting partners, assign work packages, track contract values, paid milestones, and dues
+            Register subcontracting partners, assign multiple project contracts, track overall/project billing milestones and dues
           </p>
         </div>
 
@@ -284,6 +299,21 @@ export default function VendorsPage() {
                     {vnd.notes}
                   </p>
                 )}
+
+                {/* Project Badges */}
+                {vnd.projectAssignments && vnd.projectAssignments.length > 0 && (
+                  <div className="mt-3.5 flex flex-wrap gap-1.5">
+                    {vnd.projectAssignments.map((pa) => (
+                      <span
+                        key={pa.id}
+                        className="text-[9px] font-bold px-2 py-1 bg-slate-950/80 border border-slate-850 text-slate-400 rounded-lg uppercase tracking-wider font-mono hover:text-cyan-400 transition-colors"
+                        title={`${pa.project.name} (Contract: ${formatCurrency(pa.contractAmount)})`}
+                      >
+                        {pa.project.code}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 border-t border-slate-800/80 pt-4 space-y-2.5">
@@ -300,19 +330,19 @@ export default function VendorsPage() {
 
                 <div className="grid grid-cols-3 gap-2 border-t border-slate-800/40 pt-3 text-center text-[10px] font-medium">
                   <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
-                    <span className="text-slate-550 block">Contract</span>
+                    <span className="text-slate-550 block text-[9px] uppercase tracking-wider">Total Contract</span>
                     <span className="text-slate-200 font-bold block mt-0.5">
                       {formatCurrency(vnd.contractAmount)}
                     </span>
                   </div>
                   <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
-                    <span className="text-slate-550 block">Paid</span>
+                    <span className="text-slate-550 block text-[9px] uppercase tracking-wider">Total Paid</span>
                     <span className="text-emerald-400 font-bold block mt-0.5">
                       {formatCurrency(vnd.paidAmount)}
                     </span>
                   </div>
                   <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
-                    <span className="text-slate-550 block">Outstanding</span>
+                    <span className="text-slate-550 block text-[9px] uppercase tracking-wider">Total Due</span>
                     <span
                       className={`font-bold block mt-0.5 ${
                         vnd.dueAmount > 0 ? 'text-amber-400' : 'text-slate-500'
@@ -376,6 +406,42 @@ export default function VendorsPage() {
       >
         {selectedVendor && (
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Project-wise Billings */}
+              <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/30">
+                <h3 className="text-xs font-bold text-slate-350 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">
+                  Project-wise Billings Breakdown
+                </h3>
+                {!selectedVendor.projectAssignments || selectedVendor.projectAssignments.length === 0 ? (
+                  <p className="text-slate-500 text-xs italic">No active project assignments.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedVendor.projectAssignments.map((pa) => (
+                      <div key={pa.id} className="p-3 bg-slate-950/50 border border-slate-850 rounded-xl space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-slate-200 text-xs">{pa.project.code} - {pa.project.name}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-400">
+                          <div>
+                            <span className="text-slate-550 block">Contract</span>
+                            <span className="font-semibold text-slate-300">{formatCurrency(pa.contractAmount)}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-550 block">Paid</span>
+                            <span className="font-semibold text-emerald-400">{formatCurrency(pa.paidAmount)}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-550 block">Due</span>
+                            <span className={`font-semibold ${pa.dueAmount > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                              {formatCurrency(pa.dueAmount)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Payments History */}
               <div>
                 <h3 className="text-xs font-bold text-slate-350 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2 flex items-center gap-2">
@@ -408,18 +474,18 @@ export default function VendorsPage() {
               {/* Progress Summary */}
               <div className="p-4 border border-slate-800 rounded-xl bg-slate-950/30 text-xs space-y-2">
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Contract billing status
+                  Total Vendor billing status
                 </h4>
                 <div className="flex justify-between">
-                  <span className="text-slate-450">Agreed Contract Cap:</span>
+                  <span className="text-slate-450">Agreed Contract Cap (Total):</span>
                   <span className="font-bold text-slate-200">{formatCurrency(selectedVendor.contractAmount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-450">Disbursed Milestones:</span>
+                  <span className="text-slate-450">Disbursed Milestones (Total):</span>
                   <span className="font-bold text-emerald-400">{formatCurrency(selectedVendor.paidAmount)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-slate-800/80 font-semibold">
-                  <span className="text-slate-300">Remaining Due Liability:</span>
+                  <span className="text-slate-300">Remaining Due Liability (Total):</span>
                   <span className={`font-bold ${selectedVendor.dueAmount > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
                     {formatCurrency(selectedVendor.dueAmount)}
                   </span>
@@ -525,40 +591,85 @@ export default function VendorsPage() {
                 {errors.address && <p className="text-rose-400 text-[10px] mt-1">{errors.address.message}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Contract Amount ($)</label>
-                  <input
-                    type="text"
-                    {...register('contractAmount')}
-                    placeholder="0.00"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.contractAmount
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.contractAmount && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.contractAmount.message}</p>
-                  )}
+              {/* Project Assignments Section */}
+              <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-350 uppercase tracking-widest">
+                    Project Assignments
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => append({ projectId: '', contractAmount: '', paidAmount: '0' })}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:text-slate-100 rounded-lg text-[10px] font-bold text-slate-400 transition-all cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3 text-cyan-400" />
+                    <span>Add Project Assignment</span>
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-slate-400 text-xs font-semibold mb-2">Paid Amount ($)</label>
-                  <input
-                    type="text"
-                    {...register('paidAmount')}
-                    placeholder="0.00"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.paidAmount
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
-                  />
-                  {errors.paidAmount && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.paidAmount.message}</p>
-                  )}
-                </div>
+                {fields.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No project assignments added yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="grid grid-cols-12 gap-3 items-end bg-slate-950/40 p-3 border border-slate-850 rounded-xl">
+                        <div className="col-span-5">
+                          <label className="block text-slate-500 text-[10px] font-semibold mb-1.5">Project</label>
+                          <select
+                            {...register(`assignments.${index}.projectId` as const)}
+                            className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-[11px] transition-all cursor-pointer"
+                          >
+                            <option value="" disabled>Select Project...</option>
+                            {projects.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.code} - {p.name}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.assignments?.[index]?.projectId && (
+                            <p className="text-rose-400 text-[9px] mt-1">{errors.assignments[index]?.projectId?.message}</p>
+                          )}
+                        </div>
+
+                        <div className="col-span-3">
+                          <label className="block text-slate-500 text-[10px] font-semibold mb-1.5">Contract ($)</label>
+                          <input
+                            type="text"
+                            placeholder="0.00"
+                            {...register(`assignments.${index}.contractAmount` as const)}
+                            className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-[11px] transition-all"
+                          />
+                          {errors.assignments?.[index]?.contractAmount && (
+                            <p className="text-rose-400 text-[9px] mt-1">{errors.assignments[index]?.contractAmount?.message}</p>
+                          )}
+                        </div>
+
+                        <div className="col-span-3">
+                          <label className="block text-slate-500 text-[10px] font-semibold mb-1.5">Paid ($)</label>
+                          <input
+                            type="text"
+                            placeholder="0.00"
+                            {...register(`assignments.${index}.paidAmount` as const)}
+                            className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-[11px] transition-all"
+                          />
+                        </div>
+
+                        <div className="col-span-1 flex justify-center pb-1">
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/5 rounded-md transition-all cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {errors.assignments?.message && (
+                  <p className="text-rose-400 text-[10px] mt-1">{errors.assignments.message}</p>
+                )}
               </div>
 
               <div>

@@ -118,13 +118,13 @@ export default function UsersPage() {
   const createForm = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
     defaultValues: { fullName: '', email: '', password: '', role: 'DATA_ENTRY_OPERATOR' },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   const editForm = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
     defaultValues: { fullName: '', email: '', password: '', role: 'DATA_ENTRY_OPERATOR' },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   const activeForm = modalMode === 'create' ? createForm : editForm;

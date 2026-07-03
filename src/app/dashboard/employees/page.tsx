@@ -141,7 +141,7 @@ export default function EmployeesPage() {
       monthlySalary: '',
       employmentStatus: 'ACTIVE',
     },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   // React Hook Form for Labour
@@ -161,7 +161,7 @@ export default function EmployeesPage() {
       projectId: '',
       employmentStatus: 'ACTIVE',
     },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   // Load fetched attendance into form state

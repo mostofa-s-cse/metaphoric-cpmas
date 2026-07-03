@@ -18,15 +18,42 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, companyName, contactNumber, address, workType, contractAmount, paidAmount, notes } = body;
+    const { name, companyName, contactNumber, address, workType, contractAmount, paidAmount, notes, assignments } = body;
 
     const vendor = await prisma.vendor.findUnique({ where: { id } });
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
     }
 
-    const cAmt = contractAmount !== undefined ? parseFloat(contractAmount) : vendor.contractAmount;
-    const pAmt = paidAmount !== undefined ? parseFloat(paidAmount) : vendor.paidAmount;
+    // Sync project assignments
+    await prisma.projectVendor.deleteMany({ where: { vendorId: id } });
+
+    if (assignments && Array.isArray(assignments) && assignments.length > 0) {
+      await prisma.projectVendor.createMany({
+        data: assignments.map((a: any) => {
+          const actAmt = parseFloat(a.contractAmount || '0');
+          const pdAmt = parseFloat(a.paidAmount || '0');
+          return {
+            vendorId: id,
+            projectId: a.projectId,
+            contractAmount: actAmt,
+            paidAmount: pdAmt,
+            dueAmount: actAmt - pdAmt,
+          };
+        }),
+      });
+    }
+
+    let cAmt = 0.0;
+    let pAmt = 0.0;
+
+    if (assignments && Array.isArray(assignments) && assignments.length > 0) {
+      cAmt = assignments.reduce((sum, a) => sum + parseFloat(a.contractAmount || '0'), 0.0);
+      pAmt = assignments.reduce((sum, a) => sum + parseFloat(a.paidAmount || '0'), 0.0);
+    } else {
+      cAmt = contractAmount !== undefined ? parseFloat(contractAmount) : vendor.contractAmount;
+      pAmt = paidAmount !== undefined ? parseFloat(paidAmount) : vendor.paidAmount;
+    }
     const dAmt = cAmt - pAmt;
 
     const updatedVendor = await prisma.vendor.update({

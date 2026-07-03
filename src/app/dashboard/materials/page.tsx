@@ -85,7 +85,7 @@ export default function MaterialsPage() {
       purchaseDate: new Date().toISOString().split('T')[0],
       invoiceNumber: '',
     },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   const handleOpenCreate = () => {

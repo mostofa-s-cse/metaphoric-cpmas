@@ -86,7 +86,7 @@ export default function SuppliersPage() {
       openingBalance: '0',
       notes: '',
     },
-    mode: 'onChange',
+    mode: 'all',
   });
 
   // Track updates to selected supplier when lists refresh
