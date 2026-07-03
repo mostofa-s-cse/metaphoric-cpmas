@@ -248,7 +248,7 @@ export default function PortfolioLanding() {
               Facebook — {BRAND.followers} Fans
             </a>
             <Link href={isLoggedIn ? '/dashboard' : '/login'} onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center gap-3 text-[#D4AF37] text-sm font-medium tracking-widest uppercase mt-4">
-              Workspace <ArrowRight className="h-4 w-4" />
+              Login <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

@@ -84,7 +84,7 @@ export default function LoginPage() {
               <HardHat className="h-7 w-7" />
             </div>
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight group-hover:opacity-80 transition-opacity">
-              CPMAS Portal
+              Metaphoric Architect
             </h1>
             <p className="text-slate-500 text-xs mt-1.5 text-center font-medium">
               Construction Project Management &amp; Accounting System

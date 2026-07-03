@@ -232,7 +232,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="h-8 w-8 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-center text-cyan-400">
                   <HardHat className="h-4.5 w-4.5" />
                 </div>
-                <span className="font-bold text-sm text-cyan-400">Metaphoric Mobile</span>
+                <span className="font-bold text-sm text-cyan-400">Metaphoric Architect</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
                 <X className="h-5 w-5" />
