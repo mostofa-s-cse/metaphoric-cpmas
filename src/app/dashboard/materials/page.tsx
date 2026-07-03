@@ -328,20 +328,17 @@ export default function MaterialsPage() {
 
             <div>
               <label className="block text-slate-400 text-xs font-semibold mb-2">Category</label>
-              <select
+              <input
+                type="text"
                 {...register('category')}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all"
-              >
-                <option value="Cement">Cement</option>
-                <option value="Steel &amp; Rebar">Steel &amp; Rebar</option>
-                <option value="Bricks &amp; Blocks">Bricks &amp; Blocks</option>
-                <option value="Sand &amp; Aggregates">Sand &amp; Aggregates</option>
-                <option value="Pipes &amp; Plumbing">Pipes &amp; Plumbing</option>
-                <option value="Electricals">Electricals</option>
-                <option value="Wood &amp; Timber">Wood &amp; Timber</option>
-                <option value="Chemicals &amp; Paint">Chemicals &amp; Paint</option>
-                <option value="Other">Other</option>
-              </select>
+                placeholder="e.g. Cement"
+                className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  errors.category
+                    ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
+                }`}
+              />
+              {errors.category && <p className="text-rose-400 text-[10px] mt-1">{errors.category.message}</p>}
             </div>
           </div>
 

@@ -52,13 +52,13 @@ const navItems: NavItem[] = [
     roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DATA_ENTRY_OPERATOR'],
   },
   {
-    name: 'Contractors',
+    name: 'Vendor',
     href: '/dashboard/contractors',
     icon: Briefcase,
     roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'],
   },
   {
-    name: 'Employees & Labor',
+    name: 'Employee',
     href: '/dashboard/employees',
     icon: Users2,
     roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'],

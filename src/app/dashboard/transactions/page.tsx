@@ -90,9 +90,9 @@ export default function TransactionsPage() {
       projectId: '',
       clientName: '',
       amount: '',
-      paymentMethod: 'BANK',
-      bankOrCash: 'Main Bank Account',
-      source: 'CLIENT_PAYMENT',
+      paymentMethod: '' as any,
+      bankOrCash: '',
+      source: '' as any,
       referenceNumber: '',
       notes: '',
     },
@@ -111,10 +111,10 @@ export default function TransactionsPage() {
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
       projectId: '',
-      expenseCategory: 'OFFICE_RENT',
+      expenseCategory: '' as any,
       paidTo: '',
       amount: '',
-      paymentMethod: 'CASH',
+      paymentMethod: '' as any,
       referenceNumber: '',
       notes: '',
     },
@@ -127,9 +127,9 @@ export default function TransactionsPage() {
       projectId: '',
       clientName: '',
       amount: '',
-      paymentMethod: 'BANK',
-      bankOrCash: 'Main Bank Account',
-      source: 'CLIENT_PAYMENT',
+      paymentMethod: '' as any,
+      bankOrCash: '',
+      source: '' as any,
       referenceNumber: '',
       notes: '',
     });
@@ -140,10 +140,10 @@ export default function TransactionsPage() {
     resetCashOut({
       date: new Date().toISOString().split('T')[0],
       projectId: '',
-      expenseCategory: 'OFFICE_RENT',
+      expenseCategory: '' as any,
       paidTo: '',
       amount: '',
-      paymentMethod: 'CASH',
+      paymentMethod: '' as any,
       referenceNumber: '',
       notes: '',
     });
@@ -156,7 +156,7 @@ export default function TransactionsPage() {
       const payload = {
         ...values,
         amount: parseFloat(values.amount),
-        projectId: values.projectId || null,
+        projectId: values.projectId === 'GENERAL' ? null : (values.projectId || null),
       };
       await createCashIn(payload).unwrap();
       showSuccessToast('Client payment recorded');
@@ -171,7 +171,7 @@ export default function TransactionsPage() {
       const payload = {
         ...values,
         amount: parseFloat(values.amount),
-        projectId: values.projectId || null,
+        projectId: values.projectId === 'GENERAL' ? null : (values.projectId || null),
       };
       await createCashOut(payload).unwrap();
       showSuccessToast('Cash disbursement payment recorded');
@@ -331,7 +331,7 @@ export default function TransactionsPage() {
                     <th className="p-4">Date</th>
                     <th className="p-4">Paid By (Client)</th>
                     <th className="p-4">Source Category</th>
-                    <th className="p-4">Destination (Bank/Cash)</th>
+                    <th className="p-4">Deposit To (Bank/Cash)</th>
                     <th className="p-4">Linked Project</th>
                     <th className="p-4 text-right">Amount</th>
                     {user?.role === 'SUPER_ADMIN' && <th className="p-4 text-right">Delete</th>}
@@ -496,6 +496,7 @@ export default function TransactionsPage() {
                     {...registerCashIn('source')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
+                    <option value="" disabled>Select Category...</option>
                     <option value="CLIENT_PAYMENT">Client Progress Invoice</option>
                     <option value="ADVANCE_PAYMENT">Project Mobilization Advance</option>
                     <option value="INSTALLMENT">Periodic Installment</option>
@@ -509,7 +510,8 @@ export default function TransactionsPage() {
                     {...registerCashIn('projectId')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="">General Corporate Income (No Project)</option>
+                    <option value="" disabled>Select Project...</option>
+                    <option value="GENERAL">General Corporate Income (No Project)</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.code} - {p.name}
@@ -543,6 +545,7 @@ export default function TransactionsPage() {
                     {...registerCashIn('paymentMethod')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
+                    <option value="" disabled>Select Method...</option>
                     <option value="BANK">Bank Transfer</option>
                     <option value="CASH">Cash</option>
                     <option value="CHEQUE">Cheque</option>
@@ -569,12 +572,12 @@ export default function TransactionsPage() {
 
               <div>
                 <label className="block text-slate-400 text-xs font-semibold mb-2">
-                  Destination Bank Account / Safe Cash
+                  Deposit To (Bank / Cash)
                 </label>
                 <input
                   type="text"
                   {...registerCashIn('bankOrCash')}
-                  placeholder="e.g. Chase Operating #4829"
+                  placeholder="e.g. City Bank A/C: 1234, DBBL Mobile, or Office Safe Cash"
                   className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
                     cashInErrors.bankOrCash
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
@@ -677,6 +680,7 @@ export default function TransactionsPage() {
                     {...registerCashOut('expenseCategory')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
+                    <option value="" disabled>Select Category...</option>
                     <option value="MATERIALS">Raw Materials Purchase</option>
                     <option value="LABOR">Site Labor Daily Wages</option>
                     <option value="CONTRACTOR_PAYMENT">Subcontractor Payment Milestone</option>
@@ -695,7 +699,8 @@ export default function TransactionsPage() {
                     {...registerCashOut('projectId')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="">Corporate Overhead (General Corporate)</option>
+                    <option value="" disabled>Select Project...</option>
+                    <option value="GENERAL">Corporate Overhead (General Corporate)</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.code} - {p.name}
@@ -731,6 +736,7 @@ export default function TransactionsPage() {
                     {...registerCashOut('paymentMethod')}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
+                    <option value="" disabled>Select Method...</option>
                     <option value="CASH">Cash in Hand</option>
                     <option value="BANK">Bank Transfer</option>
                     <option value="CHEQUE">Cheque</option>

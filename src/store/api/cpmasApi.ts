@@ -504,12 +504,12 @@ export const cpmasApi = createApi({
     }),
 
     createCashIn: builder.mutation<{ cashIn: ApiCashIn }, Partial<ApiCashIn>>({
-      query: (body) => ({ url: '/transactions', method: 'POST', body: { ...body, type: 'IN' } }),
+      query: (body) => ({ url: '/transactions', method: 'POST', body: { ...body, type: 'CASHIN' } }),
       invalidatesTags: [{ type: 'CashIn', id: 'LIST' }, 'Reports'],
     }),
 
     createCashOut: builder.mutation<{ cashOut: ApiCashOut }, Partial<ApiCashOut>>({
-      query: (body) => ({ url: '/transactions', method: 'POST', body: { ...body, type: 'OUT' } }),
+      query: (body) => ({ url: '/transactions', method: 'POST', body: { ...body, type: 'CASHOUT' } }),
       invalidatesTags: [{ type: 'CashOut', id: 'LIST' }, 'Reports'],
     }),
 
