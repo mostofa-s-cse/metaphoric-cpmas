@@ -76,6 +76,9 @@ model Project {
   attendances  Attendance[]
   projectVendors ProjectVendor[]
   projectSuppliers ProjectSupplier[]
+
+  @@index([name])
+  @@index([status])
 }
 
 model Supplier {
@@ -95,6 +98,8 @@ model Supplier {
   cashOuts  CashOut[]
   documents Document[]
   projectAssignments ProjectSupplier[]
+
+  @@index([name])
 }
 
 model Vendor {
@@ -114,6 +119,8 @@ model Vendor {
   cashOuts  CashOut[]
   documents Document[]
   projectAssignments ProjectVendor[]
+
+  @@index([name])
 }
 
 model Employee {
@@ -133,6 +140,8 @@ model Employee {
   salaries  Salary[]
   cashOuts  CashOut[]
   documents Document[]
+
+  @@index([fullName])
 }
 
 model Labour {
@@ -150,6 +159,9 @@ model Labour {
   attendances Attendance[]
   cashOuts    CashOut[]
   documents   Document[]
+
+  @@index([name])
+  @@index([trade])
 }
 
 model Attendance {
@@ -184,6 +196,9 @@ model Material {
   updatedAt     DateTime  @updatedAt
 
   cashOuts CashOut[]
+
+  @@index([name])
+  @@index([category])
 }
 
 model CashIn {
@@ -200,6 +215,9 @@ model CashIn {
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([clientName])
+  @@index([date])
 }
 
 model CashOut {
@@ -230,6 +248,9 @@ model CashOut {
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([paidTo])
+  @@index([date])
 }
 
 model Salary {
@@ -274,6 +295,8 @@ model Document {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  @@index([name])
 }
 
 model AuditLog {
@@ -284,6 +307,9 @@ model AuditLog {
   details   String
   ipAddress String?
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model ContactInquiry {
@@ -294,6 +320,8 @@ model ContactInquiry {
   details   String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 model ProjectVendor {

@@ -46,7 +46,7 @@ import {
 
 export default function ProjectsPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   if (!user) return null;
 
@@ -173,8 +173,7 @@ export default function ProjectsPage() {
   const confirmDelete = async () => {
     if (!projectToDelete) return;
     try {
-      await deleteProject(projectToDelete).unwrap();
-      showSuccessToast('Project deleted successfully');
+      await toast.handlePromise(deleteProject(projectToDelete).unwrap());
       refetch();
       if (selectedProject?.id === projectToDelete) {
         setIsDetailsOpen(false);
@@ -182,7 +181,7 @@ export default function ProjectsPage() {
       setDeleteConfirmOpen(false);
       setProjectToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete project');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -193,17 +192,15 @@ export default function ProjectsPage() {
         estimatedBudget: parseFloat(values.estimatedBudget),
       };
       if (modalMode === 'create') {
-        await createProject(payload).unwrap();
-        showSuccessToast('Project created successfully');
+        await toast.handlePromise(createProject(payload).unwrap());
         refetch();
       } else if (selectedProjectId) {
-        await updateProject({ id: selectedProjectId, ...payload }).unwrap();
-        showSuccessToast('Project updated successfully');
+        await toast.handlePromise(updateProject({ id: selectedProjectId, ...payload }).unwrap());
         refetch();
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to save project');
+      // toast.handlePromise already handled the error toast
     }
   };
 

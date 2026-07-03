@@ -38,7 +38,7 @@ import {
 
 export default function MaterialsPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   // Queries & Mutations
   const { data: matData, isLoading: isFetchingMaterials, error: matError, refetch: refetchMaterials } = useGetMaterialsQuery();
@@ -90,11 +90,11 @@ export default function MaterialsPage() {
 
   const handleOpenCreate = () => {
     if (projects.length === 0) {
-      showErrorToast('You must create a Project before logging materials');
+      toast.error('You must create a Project before logging materials');
       return;
     }
     if (suppliers.length === 0) {
-      showErrorToast('You must create a Supplier before logging materials');
+      toast.error('You must create a Supplier before logging materials');
       return;
     }
 
@@ -120,13 +120,12 @@ export default function MaterialsPage() {
   const confirmDelete = async () => {
     if (!materialToDelete) return;
     try {
-      await deleteMaterial(materialToDelete).unwrap();
-      showSuccessToast('Purchase record deleted');
+      await toast.handlePromise(deleteMaterial(materialToDelete).unwrap());
       refetchMaterials();
       setDeleteConfirmOpen(false);
       setMaterialToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete record');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -137,12 +136,11 @@ export default function MaterialsPage() {
         quantity: parseFloat(values.quantity),
         unitPrice: parseFloat(values.unitPrice),
       };
-      await createMaterial(payload).unwrap();
-      showSuccessToast('Material purchase logged successfully');
+      await toast.handlePromise(createMaterial(payload).unwrap());
       refetchMaterials();
       setIsModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to log material purchase');
+      // toast.handlePromise already handled the error toast
     }
   };
 

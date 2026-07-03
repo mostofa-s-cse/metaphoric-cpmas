@@ -1,19 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getCurrentUser, signJWT } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
-import { getPaginationParams, formatPaginatedResponse } from '@/lib/pagination';
+import { getPaginationParams } from '@/lib/pagination';
+import {
+  apiCreated,
+  apiPaginated,
+  apiError,
+  apiBadRequest,
+  apiUnauthorized,
+  apiForbidden,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/users';
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     // Only Super Admin can view all users
     if (user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return apiForbidden(PATH);
     }
 
     const { page, limit, skip, take } = getPaginationParams(request);
@@ -35,10 +45,10 @@ export async function GET(request: NextRequest) {
       prisma.user.count(),
     ]);
 
-    return NextResponse.json(formatPaginatedResponse('users', users, total, page, limit));
+    return apiPaginated('users', users, total, page, limit, 'Users retrieved successfully', PATH);
   } catch (error: any) {
     console.error('Users fetch error:', error);
-    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+    return apiError('Failed to fetch users', PATH);
   }
 }
 
@@ -46,30 +56,32 @@ export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     // Only Super Admin can create users
     if (currentUser.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+      return apiForbidden(PATH, 'Forbidden: Insufficient privileges');
     }
 
     const body = await request.json();
     const { email, fullName, password, role } = body;
 
     if (!email || !fullName || !password || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return apiBadRequest('Missing required fields', PATH);
     }
 
-
     // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
     if (existing) {
-      return NextResponse.json({ error: 'Email address already registered' }, { status: 400 });
+      return apiBadRequest('Email address already registered', PATH);
     }
 
     if (password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+      return apiBadRequest('Password must be at least 6 characters', PATH);
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -87,9 +99,9 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ user: newUser });
+    return apiCreated({ user: newUser }, 'User created successfully', PATH);
   } catch (error: any) {
     console.error('User create error:', error);
-    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+    return apiError('Failed to create user', PATH);
   }
 }

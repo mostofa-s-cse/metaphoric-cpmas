@@ -1,20 +1,29 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import {
+  apiSuccess,
+  apiError,
+  apiBadRequest,
+  apiUnauthorized,
+  apiForbidden,
+  apiNotFound,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/users';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const { id } = await params;
 
     // Users can view their own profile; super admins can view any
     if (currentUser.id !== id && currentUser.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return apiForbidden(PATH);
     }
 
     const user = await prisma.user.findUnique({
@@ -31,13 +40,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return apiNotFound('User', PATH);
     }
 
-    return NextResponse.json({ user });
+    return apiSuccess({ user }, 'User details retrieved successfully', PATH);
   } catch (error: any) {
     console.error('User fetch error:', error);
-    return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
+    return apiError('Failed to fetch user', PATH);
   }
 }
 
@@ -45,7 +54,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const { id } = await params;
@@ -57,12 +66,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
 
     if (!isSelf && !isSuperAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return apiForbidden(PATH);
     }
 
     // Non-super-admins cannot change role
     if (!isSuperAdmin && role) {
-      return NextResponse.json({ error: 'Forbidden: Cannot change own role' }, { status: 403 });
+      return apiForbidden(PATH, 'Forbidden: Cannot change own role');
     }
 
     const updateData: any = {};
@@ -74,7 +83,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     if (newPassword) {
       if (newPassword.length < 6) {
-        return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+        return apiBadRequest('Password must be at least 6 characters', PATH);
       }
       updateData.passwordHash = await bcrypt.hash(newPassword, 12);
     }
@@ -102,10 +111,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       },
     });
 
-    return NextResponse.json({ user: updatedUser });
+    return apiSuccess({ user: updatedUser }, 'User updated successfully', PATH);
   } catch (error: any) {
     console.error('User update error:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    return apiError('Failed to update user', PATH);
   }
 }
 
@@ -113,24 +122,27 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const { id } = await params;
 
     // Only Super Admin can delete users
     if (currentUser.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Only Super Admin can delete users' }, { status: 403 });
+      return apiForbidden(PATH, 'Forbidden: Only Super Admin can delete users');
     }
 
     // Prevent self-deletion
     if (currentUser.id === id) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
+      return apiBadRequest('Cannot delete your own account', PATH);
     }
 
-    const userToDelete = await prisma.user.findUnique({ where: { id } });
+    const userToDelete = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, fullName: true, email: true },
+    });
     if (!userToDelete) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return apiNotFound('User', PATH);
     }
 
     await prisma.user.delete({ where: { id } });
@@ -144,9 +156,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess(null, 'User deleted successfully', PATH);
   } catch (error: any) {
     console.error('User delete error:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    return apiError('Failed to delete user', PATH);
   }
 }

@@ -41,7 +41,7 @@ import {
 
 export default function DocumentsPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -112,7 +112,7 @@ export default function DocumentsPage() {
 
   const onSubmit = async (values: DocumentFormValues) => {
     if (!selectedFile) {
-      showErrorToast('Please select a file to upload');
+      toast.error('Please select a file to upload');
       return;
     }
 
@@ -141,12 +141,11 @@ export default function DocumentsPage() {
         vendorId: values.vendorId || null,
       };
 
-      await createDocument(payload).unwrap();
-      showSuccessToast('Document record uploaded');
+      await toast.handlePromise(createDocument(payload).unwrap());
       refetchDocs();
       setIsModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.message || err?.data?.error || 'Failed to upload document');
+      // toast.handlePromise already handled the error toast
     } finally {
       setIsUploading(false);
     }
@@ -160,12 +159,11 @@ export default function DocumentsPage() {
     if (!deleteId) return;
     try {
       setIsDeleting(true);
-      await deleteDocument(deleteId).unwrap();
-      showSuccessToast('Document record and physical file deleted successfully');
+      await toast.handlePromise(deleteDocument(deleteId).unwrap());
       refetchDocs();
       setDeleteId(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete document');
+      // toast.handlePromise already handled the error toast
     } finally {
       setIsDeleting(false);
     }

@@ -2,80 +2,76 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { signJWT } from '@/lib/auth';
+import { apiBadRequest, apiError } from '@/lib/apiResponse';
+import { withErrorHandler } from '@/lib/errorHandler';
 
-export async function POST(request: Request) {
-  try {
-    const { email, password } = await request.json();
+const PATH = '/api/auth/login';
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      );
-    }
+async function postHandler(request: Request) {
+  const { email, password } = await request.json();
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+  if (!email || !password) {
+    return apiBadRequest('Email and password are required', PATH);
+  }
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
+  const user = await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+  });
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+  if (!user) {
+    return apiError('Invalid email or password', PATH, 401);
+  }
 
-    if (!isMatch) {
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
 
-    // Sign JWT
-    const token = await signJWT({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      fullName: user.fullName,
-    });
+  if (!isMatch) {
+    return apiError('Invalid email or password', PATH, 401);
+  }
 
-    // Create response
-    const response = NextResponse.json({
+  // Sign JWT
+  const token = await signJWT({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    fullName: user.fullName,
+  });
+
+  // Create success response using standard envelope manually to allow setting cookies
+  const response = NextResponse.json({
+    status: 'success',
+    message: "Welcome back! You've logged in successfully.",
+    data: {
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        profileImage: user.profileImage,
       },
-    });
+    },
+    timestamp: new Date().toISOString(),
+    path: PATH,
+  });
 
-    // Set cookie (HTTP-only, secure, sameSite)
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 86400, // 1 day
-      path: '/',
-    });
+  // Set cookie (HTTP-only, secure, sameSite)
+  response.cookies.set('auth_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 86400, // 1 day
+    path: '/',
+  });
 
-    // Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'USER_LOGIN',
-        details: `User logged in: ${user.email}`,
-      },
-    });
+  // Audit Log
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: 'USER_LOGIN',
+      details: `User logged in: ${user.email}`,
+    },
+  });
 
-    return response;
-  } catch (error: any) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred during login' },
-      { status: 500 }
-    );
-  }
+  return response;
 }
+
+export const POST = withErrorHandler(postHandler, PATH);

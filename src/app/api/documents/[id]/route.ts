@@ -1,8 +1,16 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { promises as fs } from 'fs';
 import path from 'path';
+import {
+  apiSuccess,
+  apiError,
+  apiUnauthorized,
+  apiForbidden,
+  apiNotFound,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/documents';
 
 // Helper to delete physical file from disk
 async function deletePhysicalFile(url: string) {
@@ -24,22 +32,23 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     // RBAC: Only Super Admin can delete documents
     if (user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+      return apiForbidden(PATH, 'Forbidden: Super Admin access required');
     }
 
     const { id } = await params;
 
     const document = await prisma.document.findUnique({
       where: { id },
+      select: { id: true, name: true, url: true, category: true },
     });
 
     if (!document) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      return apiNotFound('Document', PATH);
     }
 
     // 1. Delete the physical file from disk
@@ -59,9 +68,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess(null, 'Document deleted successfully', PATH);
   } catch (error) {
     console.error('Error deleting document:', error);
-    return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 });
+    return apiError('Failed to delete document', PATH);
   }
 }

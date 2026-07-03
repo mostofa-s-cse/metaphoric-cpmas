@@ -40,7 +40,7 @@ import {
 
 export default function SuppliersPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   // Queries & Mutations
   const { data, isLoading: isFetching, error: fetchError, refetch: refetchSuppliers } = useGetSuppliersQuery();
@@ -155,8 +155,7 @@ export default function SuppliersPage() {
   const confirmDelete = async () => {
     if (!supplierToDelete) return;
     try {
-      await deleteSupplier(supplierToDelete).unwrap();
-      showSuccessToast('Supplier deleted successfully');
+      await toast.handlePromise(deleteSupplier(supplierToDelete).unwrap());
       refetchSuppliers();
       if (selectedSupplier?.id === supplierToDelete) {
         setIsHistoryOpen(false);
@@ -164,7 +163,7 @@ export default function SuppliersPage() {
       setDeleteConfirmOpen(false);
       setSupplierToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete supplier');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -180,17 +179,15 @@ export default function SuppliersPage() {
         })) || [],
       };
       if (modalMode === 'create') {
-        await createSupplier(payload).unwrap();
-        showSuccessToast('Supplier profile created');
+        await toast.handlePromise(createSupplier(payload).unwrap());
         refetchSuppliers();
       } else if (selectedSupplierId) {
-        await updateSupplier({ id: selectedSupplierId, ...payload }).unwrap();
-        showSuccessToast('Supplier profile updated');
+        await toast.handlePromise(updateSupplier({ id: selectedSupplierId, ...payload }).unwrap());
         refetchSuppliers();
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to save supplier profile');
+      // toast.handlePromise already handled the error toast
     }
   };
 

@@ -1,12 +1,20 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import {
+  apiSuccess,
+  apiCreated,
+  apiError,
+  apiBadRequest,
+  apiUnauthorized,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/documents';
 
 export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const documents = await prisma.document.findMany({
@@ -18,10 +26,10 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ documents });
+    return apiSuccess({ documents }, 'Documents retrieved successfully', PATH);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch document index' }, { status: 500 });
+    console.error('Fetch documents error:', error);
+    return apiError('Failed to fetch document index', PATH);
   }
 }
 
@@ -29,14 +37,14 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const body = await request.json();
     const { name, url, fileType, category, projectId, supplierId, vendorId, description, mockUrl } = body;
 
     if (!name || !fileType || !category) {
-      return NextResponse.json({ error: 'Name, File Type and Category are required' }, { status: 400 });
+      return apiBadRequest('Name, File Type and Category are required', PATH);
     }
 
     // Generate a default mock URL if not provided (defaulting to /uploads/ relative format)
@@ -63,9 +71,9 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, document });
+    return apiCreated({ document }, 'Document uploaded successfully', PATH);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });
+    console.error('Create document error:', error);
+    return apiError('Failed to upload document', PATH);
   }
 }

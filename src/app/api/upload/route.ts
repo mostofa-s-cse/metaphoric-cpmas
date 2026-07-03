@@ -1,20 +1,27 @@
-import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import {
+  apiSuccess,
+  apiError,
+  apiBadRequest,
+  apiUnauthorized,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/upload';
 
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file received.' }, { status: 400 });
+      return apiBadRequest('No file received.', PATH);
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -32,9 +39,9 @@ export async function POST(request: Request) {
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, buffer);
 
-    return NextResponse.json({ url: `/uploads/${filename}` });
+    return apiSuccess({ url: `/uploads/${filename}` }, 'File uploaded successfully', PATH);
   } catch (error) {
     console.error('Error uploading file:', error);
-    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+    return apiError('Failed to upload file', PATH);
   }
 }

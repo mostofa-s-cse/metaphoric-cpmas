@@ -24,6 +24,20 @@ export interface ApiUser {
   updatedAt: string;
 }
 
+export interface ApiAuditLog {
+  id: string;
+  userId: string | null;
+  user: {
+    fullName: string;
+    email: string;
+    role: UserRole;
+  } | null;
+  action: string;
+  details: string;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
 export type ProjectStatus = 'PLANNING' | 'RUNNING' | 'COMPLETED' | 'ARCHIVED';
 export type ProjectType = 'CONSULTANCY' | 'SUPERVISION' | 'CONSTRUCTION' | 'SUPPLYING';
 
@@ -195,7 +209,9 @@ export interface ApiDocument {
 
 // ─── Base Query ───────────────────────────────────────────────────────────────
 
-const baseQuery = retry(
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
+
+const rawBaseQuery = retry(
   fetchBaseQuery({
     baseUrl: '/api',
     credentials: 'include', // send cookies automatically (JWT)
@@ -209,6 +225,52 @@ const baseQuery = retry(
   }),
   { maxRetries: 0 }
 );
+
+/**
+ * Custom baseQuery wrapper that unwraps the standardized API envelope:
+ * { status, message, data, timestamp, path }
+ *
+ * On success: returns `result.data.data` so hooks receive the inner payload.
+ * On error:   extracts the `message` field for a human-readable error.
+ */
+const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+  args,
+  api,
+  extraOptions,
+) => {
+  const result = await rawBaseQuery(args, api, extraOptions);
+
+  if (result.error) {
+    // Try to extract the envelope message from error response
+    const errorData = result.error.data as any;
+    if (errorData?.status === 'error' && errorData?.message) {
+      return {
+        error: {
+          status: result.error.status,
+          data: { error: errorData.message, ...errorData },
+        } as FetchBaseQueryError,
+      };
+    }
+    return result;
+  }
+
+  // Unwrap envelope: if response has the { status, data } structure, extract `data`
+  const responseData = result.data as any;
+  if (responseData?.status === 'success' && responseData?.data !== undefined) {
+    if (responseData.data && typeof responseData.data === 'object') {
+      return {
+        data: {
+          ...responseData.data,
+          _envelopeMessage: responseData.message,
+        },
+      };
+    }
+    return { data: responseData.data };
+  }
+
+  // Fallback: return as-is for non-envelope responses (e.g. during migration)
+  return result;
+};
 
 // ─── Cache Tags ───────────────────────────────────────────────────────────────
 
@@ -226,6 +288,7 @@ const TAGS = [
   'CashOut',
   'Documents',
   'Reports',
+  'AuditLogs',
 ] as const;
 
 type CacheTag = (typeof TAGS)[number];
@@ -602,6 +665,41 @@ export const cpmasApi = createApi({
       query: (body) => ({ url: '/attendance', method: 'POST', body }),
       invalidatesTags: [{ type: 'Attendance', id: 'LIST' }],
     }),
+
+    getAuditLogs: builder.query<
+      { auditLogs: ApiAuditLog[]; total: number; page: number; limit: number; totalPages: number },
+      { page?: number; limit?: number; search?: string; actionGroup?: string; entityType?: string; startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => {
+        // Clean out empty/ALL fields
+        const cleanParams: any = {};
+        if (params) {
+          Object.entries(params).forEach(([key, val]) => {
+            if (val !== undefined && val !== null && val !== '') {
+              cleanParams[key] = String(val);
+            }
+          });
+        }
+        const qs = new URLSearchParams(cleanParams).toString();
+        return `/audit-logs${qs ? `?${qs}` : ''}`;
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.auditLogs.map(({ id }) => ({ type: 'AuditLogs' as CacheTag, id })),
+              { type: 'AuditLogs', id: 'LIST' },
+            ]
+          : [{ type: 'AuditLogs', id: 'LIST' }],
+    }),
+
+    deleteAuditLogs: builder.mutation<{ success: boolean; count: number }, { startDate: string; endDate: string }>({
+      query: (body) => ({
+        url: '/audit-logs',
+        method: 'DELETE',
+        body,
+      }),
+      invalidatesTags: [{ type: 'AuditLogs', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -663,4 +761,7 @@ export const {
   // Attendance
   useGetAttendanceQuery,
   useCreateAttendanceMutation,
+  // Audit Logs
+  useGetAuditLogsQuery,
+  useDeleteAuditLogsMutation,
 } = cpmasApi;

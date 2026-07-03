@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 
+const PATH = '/api/auth/logout';
+
 export async function POST() {
-  const response = NextResponse.json({ success: true, message: 'Logged out successfully' });
+  const response = NextResponse.json({
+    status: 'success',
+    message: 'Logged out successfully',
+    data: null,
+    timestamp: new Date().toISOString(),
+    path: PATH,
+  });
   
   // Clear cookie
   response.cookies.set('auth_token', '', {

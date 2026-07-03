@@ -1,12 +1,20 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import {
+  apiSuccess,
+  apiCreated,
+  apiError,
+  apiBadRequest,
+  apiUnauthorized,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/attendance';
 
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const { searchParams } = new URL(request.url);
@@ -30,14 +38,21 @@ export async function GET(request: Request) {
         },
       },
       include: {
-        labour: true,
+        labour: {
+          select: {
+            id: true,
+            name: true,
+            trade: true,
+            dailyWage: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json({ attendances });
+    return apiSuccess({ attendances }, 'Attendance logs retrieved successfully', PATH);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch attendance logs' }, { status: 500 });
+    console.error('Fetch attendance error:', error);
+    return apiError('Failed to fetch attendance logs', PATH);
   }
 }
 
@@ -45,14 +60,14 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized(PATH);
     }
 
     const body = await request.json();
     const { date, records } = body; // records: [{ labourId: string, status: 'PRESENT'|'ABSENT'|'LEAVE' }]
 
     if (!date || !records || !Array.isArray(records)) {
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+      return apiBadRequest('Missing required parameters', PATH);
     }
 
     const attendanceDate = new Date(date);
@@ -93,9 +108,9 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, count: savedRecords.length });
+    return apiCreated({ count: savedRecords.length }, 'Attendance logs saved successfully', PATH);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to save attendance logs' }, { status: 500 });
+    console.error('Save attendance error:', error);
+    return apiError('Failed to save attendance logs', PATH);
   }
 }

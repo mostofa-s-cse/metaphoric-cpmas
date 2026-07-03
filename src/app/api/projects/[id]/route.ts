@@ -1,174 +1,191 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import {
+  apiSuccess,
+  apiUnauthorized,
+  apiForbidden,
+  apiNotFound,
+  apiBadRequest,
+} from '@/lib/apiResponse';
+import { withErrorHandler } from '@/lib/errorHandler';
 
-export async function GET(
+const PATH = '/api/projects';
+
+async function getHandler(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const user = await getCurrentUser();
+  if (!user) {
+    return apiUnauthorized(PATH);
+  }
 
-    // Only SUPER_ADMIN can view project details
-    if (user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
-    }
+  // Only SUPER_ADMIN can view project details
+  if (user.role !== 'SUPER_ADMIN') {
+    return apiForbidden(PATH, 'Forbidden: Super Admin access required');
+  }
 
-    const { id } = await params;
-    const project = await prisma.project.findUnique({
-      where: { id },
-      include: {
-        materials: {
-          include: { supplier: true }
+  const { id } = await params;
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: {
+      materials: {
+        include: {
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+              companyName: true,
+            },
+          },
         },
-        cashIns: true,
-        cashOuts: {
-          include: {
-            supplier: true,
-            vendor: true,
-            employee: true,
-            labour: true
-          }
+      },
+      cashIns: true,
+      cashOuts: {
+        include: {
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+              companyName: true,
+            },
+          },
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+              companyName: true,
+            },
+          },
+          employee: {
+            select: {
+              id: true,
+              fullName: true,
+              designation: true,
+            },
+          },
+          labour: {
+            select: {
+              id: true,
+              name: true,
+              trade: true,
+            },
+          },
         },
-        labours: true,
-        documents: true,
       },
-    });
+      labours: true,
+      documents: true,
+    },
+  });
 
-    if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ project });
-  } catch (error: any) {
-    console.error('Project details fetch error:', error);
-    return NextResponse.json({ error: 'Failed to fetch project details' }, { status: 500 });
+  if (!project) {
+    return apiNotFound('Project', PATH);
   }
+
+  return apiSuccess({ project }, 'Project details retrieved successfully', PATH);
 }
 
-export async function PUT(
+async function putHandler(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only SUPER_ADMIN can update projects
-    if (user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-    const {
-      name,
-      code,
-      clientName,
-      clientContactNumber,
-      projectLocation,
-      startDate,
-      expectedCompletionDate,
-      estimatedBudget,
-      status,
-      projectType,
-      description,
-    } = body;
-
-    const existingProject = await prisma.project.findUnique({
-      where: { id },
-    });
-
-    if (!existingProject) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    // Check if code was updated and if it is unique
-    if (code && code !== existingProject.code) {
-      const codeCheck = await prisma.project.findUnique({ where: { code } });
-      if (codeCheck) {
-        return NextResponse.json({ error: 'Project code must be unique' }, { status: 400 });
-      }
-    }
-
-    const updatedProject = await prisma.project.update({
-      where: { id },
-      data: {
-        name: name || undefined,
-        code: code || undefined,
-        clientName: clientName || undefined,
-        clientContactNumber: clientContactNumber || undefined,
-        projectLocation: projectLocation || undefined,
-        startDate: startDate ? new Date(startDate) : undefined,
-        expectedCompletionDate: expectedCompletionDate ? new Date(expectedCompletionDate) : undefined,
-        estimatedBudget: estimatedBudget ? parseFloat(estimatedBudget) : undefined,
-        status: status || undefined,
-        projectType: projectType || undefined,
-        description: description !== undefined ? description : undefined,
-      },
-    });
-
-    // Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'UPDATE_PROJECT',
-        details: `Updated project ${updatedProject.name} (${updatedProject.code})`,
-      },
-    });
-
-    return NextResponse.json({ project: updatedProject });
-  } catch (error: any) {
-    console.error('Project update error:', error);
-    return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
+  const user = await getCurrentUser();
+  if (!user) {
+    return apiUnauthorized(PATH);
   }
+
+  // Only SUPER_ADMIN can update projects
+  if (user.role !== 'SUPER_ADMIN') {
+    return apiForbidden(PATH, 'Forbidden: Super Admin access required');
+  }
+
+  const { id } = await params;
+  const body = await request.json();
+  const {
+    name,
+    code,
+    clientName,
+    clientContactNumber,
+    projectLocation,
+    startDate,
+    expectedCompletionDate,
+    estimatedBudget,
+    status,
+    projectType,
+    description,
+  } = body;
+
+  const existingProject = await prisma.project.findUnique({
+    where: { id },
+    select: { id: true, code: true, name: true },
+  });
+
+  if (!existingProject) {
+    return apiNotFound('Project', PATH);
+  }
+
+  // Check if code was updated and if it is unique
+  if (code && code !== existingProject.code) {
+    const codeCheck = await prisma.project.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    if (codeCheck) {
+      return apiBadRequest('Project code must be unique', PATH);
+    }
+  }
+
+  const updatedProject = await prisma.project.update({
+    where: { id },
+    data: {
+      name: name || undefined,
+      code: code || undefined,
+      clientName: clientName || undefined,
+      clientContactNumber: clientContactNumber || undefined,
+      projectLocation: projectLocation || undefined,
+      startDate: startDate ? new Date(startDate) : undefined,
+      expectedCompletionDate: expectedCompletionDate ? new Date(expectedCompletionDate) : undefined,
+      estimatedBudget: estimatedBudget ? parseFloat(estimatedBudget) : undefined,
+      status: status || undefined,
+      projectType: projectType || undefined,
+      description: description !== undefined ? description : undefined,
+    },
+  });
+
+  return apiSuccess({ project: updatedProject }, 'Project updated successfully', PATH);
 }
 
-export async function DELETE(
+async function deleteHandler(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only SUPER_ADMIN can delete projects
-    if (user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Super Admin access required' }, { status: 403 });
-    }
-
-    const { id } = await params;
-    const project = await prisma.project.findUnique({
-      where: { id },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    await prisma.project.delete({
-      where: { id },
-    });
-
-    // Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'DELETE_PROJECT',
-        details: `Deleted project ${project.name} (${project.code})`,
-      },
-    });
-
-    return NextResponse.json({ success: true, message: 'Project deleted successfully' });
-  } catch (error: any) {
-    console.error('Project delete error:', error);
-    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
+  const user = await getCurrentUser();
+  if (!user) {
+    return apiUnauthorized(PATH);
   }
+
+  // Only SUPER_ADMIN can delete projects
+  if (user.role !== 'SUPER_ADMIN') {
+    return apiForbidden(PATH, 'Forbidden: Super Admin access required');
+  }
+
+  const { id } = await params;
+  const project = await prisma.project.findUnique({
+    where: { id },
+    select: { id: true, name: true, code: true },
+  });
+
+  if (!project) {
+    return apiNotFound('Project', PATH);
+  }
+
+  await prisma.project.delete({
+    where: { id },
+  });
+
+  return apiSuccess(null, 'Project deleted successfully', PATH);
 }
+
+export const GET = withErrorHandler(getHandler, PATH);
+export const PUT = withErrorHandler(putHandler, PATH);
+export const DELETE = withErrorHandler(deleteHandler, PATH);

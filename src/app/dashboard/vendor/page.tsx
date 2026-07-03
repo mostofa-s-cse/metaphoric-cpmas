@@ -37,7 +37,7 @@ import {
 
 export default function VendorsPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   // Queries & Mutations
   const { data, isLoading: isFetching, error: fetchError, refetch: refetchVendors } = useGetVendorsQuery();
@@ -152,8 +152,7 @@ export default function VendorsPage() {
   const confirmDelete = async () => {
     if (!vendorToDelete) return;
     try {
-      await deleteVendor(vendorToDelete).unwrap();
-      showSuccessToast('Vendor deleted successfully');
+      await toast.handlePromise(deleteVendor(vendorToDelete).unwrap());
       refetchVendors();
       if (selectedVendor?.id === vendorToDelete) {
         setIsHistoryOpen(false);
@@ -161,7 +160,7 @@ export default function VendorsPage() {
       setDeleteConfirmOpen(false);
       setVendorToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete vendor');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -176,16 +175,14 @@ export default function VendorsPage() {
         })),
       };
       if (modalMode === 'create') {
-        await createVendor(payload).unwrap();
-        showSuccessToast('Vendor assignment registered');
+        await toast.handlePromise(createVendor(payload).unwrap());
       } else if (selectedVendorId) {
-        await updateVendor({ id: selectedVendorId, ...payload }).unwrap();
-        showSuccessToast('Vendor profile updated');
+        await toast.handlePromise(updateVendor({ id: selectedVendorId, ...payload }).unwrap());
       }
       refetchVendors();
       setIsModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to save vendor profile');
+      // toast.handlePromise already handled the error toast
     }
   };
 

@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
+import { apiSuccess, apiUnauthorized } from '@/lib/apiResponse';
 import { getCurrentUser } from '@/lib/auth';
+import { withErrorHandler } from '@/lib/errorHandler';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ user: null }, { status: 401 });
-    }
-    return NextResponse.json({ user });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch user session' }, { status: 500 });
+const PATH = '/api/auth/me';
+
+async function getHandler() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return apiUnauthorized(PATH);
   }
+  return apiSuccess({ user }, 'User session retrieved', PATH);
 }
+
+export const GET = withErrorHandler(getHandler, PATH);

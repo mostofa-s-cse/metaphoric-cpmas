@@ -57,7 +57,7 @@ import {
 
 export default function EmployeesPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<'employees' | 'labour' | 'attendance'>('employees');
 
@@ -200,7 +200,7 @@ export default function EmployeesPage() {
 
   const handleOpenLabourCreate = () => {
     if (projects.length === 0) {
-      showErrorToast('Please create a project first before registering site labor.');
+      toast.error('Please create a project first before registering site labor.');
       return;
     }
     resetLabour({
@@ -216,29 +216,27 @@ export default function EmployeesPage() {
 
   const onEmployeeSubmit = async (values: EmployeeFormValues) => {
     try {
-      await createEmployee({
+      await toast.handlePromise(createEmployee({
         ...values,
         monthlySalary: parseFloat(values.monthlySalary),
-      }).unwrap();
-      showSuccessToast('Employee registered successfully');
+      }).unwrap());
       refetchEmployees();
       setIsEmployeeModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to register employee');
+      // toast.handlePromise already handled the error toast
     }
   };
 
   const onLabourSubmit = async (values: LabourFormValues) => {
     try {
-      await createLabour({
+      await toast.handlePromise(createLabour({
         ...values,
         dailyWage: parseFloat(values.dailyWage),
-      }).unwrap();
-      showSuccessToast('Labour worker registered successfully');
+      }).unwrap());
       refetchLabours();
       setIsLabourModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to register worker');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -251,18 +249,16 @@ export default function EmployeesPage() {
     if (!personToDelete) return;
     try {
       if (personToDelete.type === 'employee') {
-        await deleteEmployee(personToDelete.id).unwrap();
-        showSuccessToast('Employee record deleted');
+        await toast.handlePromise(deleteEmployee(personToDelete.id).unwrap());
         refetchEmployees();
       } else {
-        await deleteLabour(personToDelete.id).unwrap();
-        showSuccessToast('Worker record deleted');
+        await toast.handlePromise(deleteLabour(personToDelete.id).unwrap());
         refetchLabours();
       }
       setDeleteConfirmOpen(false);
       setPersonToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete record');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -302,13 +298,15 @@ export default function EmployeesPage() {
     };
 
     try {
-      await createCashOut(payload).unwrap();
-      showSuccessToast(
-        `Successfully logged salary disbursement of ${formatCurrency(paid)} for ${selectedEmployee.fullName}`
+      await toast.handlePromise(
+        createCashOut(payload).unwrap(),
+        {
+          successMessage: `Successfully logged salary disbursement of ${formatCurrency(paid)} for ${selectedEmployee.fullName}`
+        }
       );
       setIsSalaryModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to process salary payment');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -323,14 +321,15 @@ export default function EmployeesPage() {
     });
 
     try {
-      await saveAttendance({
-        date: selectedDate,
-        records: recordsArray,
-      }).unwrap();
-      showSuccessToast('Daily labor attendance logs updated successfully.');
+      await toast.handlePromise(
+        saveAttendance({
+          date: selectedDate,
+          records: recordsArray,
+        }).unwrap()
+      );
       refetchAttendance();
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to save attendance logs.');
+      // toast.handlePromise already handled the error toast
     }
   };
 

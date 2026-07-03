@@ -45,7 +45,7 @@ import {
 
 export default function TransactionsPage() {
   const { user } = useAuth();
-  const { success: showSuccessToast, error: showErrorToast } = useToast();
+  const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<'cashin' | 'cashout'>('cashin');
   const [searchTerm, setSearchTerm] = useState('');
@@ -158,12 +158,11 @@ export default function TransactionsPage() {
         amount: parseFloat(values.amount),
         projectId: values.projectId === 'GENERAL' ? null : (values.projectId || null),
       };
-      await createCashIn(payload).unwrap();
-      showSuccessToast('Client payment recorded');
+      await toast.handlePromise(createCashIn(payload).unwrap());
       refetchCashIn();
       setIsCashInModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to record transaction');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -174,12 +173,11 @@ export default function TransactionsPage() {
         amount: parseFloat(values.amount),
         projectId: values.projectId === 'GENERAL' ? null : (values.projectId || null),
       };
-      await createCashOut(payload).unwrap();
-      showSuccessToast('Cash disbursement payment recorded');
+      await toast.handlePromise(createCashOut(payload).unwrap());
       refetchCashOut();
       setIsCashOutModalOpen(false);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to record transaction');
+      // toast.handlePromise already handled the error toast
     }
   };
 
@@ -192,17 +190,16 @@ export default function TransactionsPage() {
     if (!transactionToDelete) return;
     try {
       if (transactionToDelete.type === 'in') {
-        await deleteCashIn(transactionToDelete.id).unwrap();
+        await toast.handlePromise(deleteCashIn(transactionToDelete.id).unwrap());
         refetchCashIn();
       } else {
-        await deleteCashOut(transactionToDelete.id).unwrap();
+        await toast.handlePromise(deleteCashOut(transactionToDelete.id).unwrap());
         refetchCashOut();
       }
-      showSuccessToast('Transaction deleted successfully');
       setDeleteConfirmOpen(false);
       setTransactionToDelete(null);
     } catch (err: any) {
-      showErrorToast(err?.data?.error || 'Failed to delete transaction');
+      // toast.handlePromise already handled the error toast
     }
   };
 

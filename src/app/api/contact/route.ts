@@ -1,6 +1,16 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import nodemailer from 'nodemailer';
+import { getCurrentUser } from '@/lib/auth';
+import {
+  apiSuccess,
+  apiCreated,
+  apiError,
+  apiBadRequest,
+  apiUnauthorized,
+  apiForbidden,
+} from '@/lib/apiResponse';
+
+const PATH = '/api/contact';
 
 export async function POST(req: Request) {
   try {
@@ -8,10 +18,7 @@ export async function POST(req: Request) {
     const { name, email, scope, details } = body;
 
     if (!name || !email || !scope) {
-      return NextResponse.json(
-        { success: false, message: 'Name, email, and scope are required.' },
-        { status: 400 }
-      );
+      return apiBadRequest('Name, email, and scope are required.', PATH);
     }
 
     // Save to database
@@ -60,27 +67,30 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Inquiry submitted', data: inquiry });
+    return apiCreated({ inquiry }, 'Inquiry submitted successfully', PATH);
   } catch (error: any) {
     console.error('API /contact error:', error);
-    return NextResponse.json(
-      { success: false, message: error?.message || 'Internal server error', error: String(error) },
-      { status: 500 }
-    );
+    return apiError(error?.message || 'Internal server error', PATH);
   }
 }
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return apiUnauthorized(PATH);
+    }
+
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+      return apiForbidden(PATH, 'Forbidden: Insufficient privileges');
+    }
+
     const inquiries = await prisma.contactInquiry.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json({ success: true, data: inquiries });
+    return apiSuccess({ inquiries }, 'Contact inquiries retrieved successfully', PATH);
   } catch (error: any) {
     console.error('API /contact GET error:', error);
-    return NextResponse.json(
-      { success: false, message: error?.message || 'Internal server error', error: String(error) },
-      { status: 500 }
-    );
+    return apiError(error?.message || 'Internal server error', PATH);
   }
 }
