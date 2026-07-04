@@ -53,20 +53,20 @@ model User {
 }
 
 model Project {
-  id                     String            @id @default(uuid())
+  id                     String        @id @default(uuid())
   name                   String
-  code                   String            @unique
+  code                   String        @unique
   clientName             String
   clientContactNumber    String
   projectLocation        String
   startDate              DateTime
   expectedCompletionDate DateTime
   estimatedBudget        String // Encrypted float
-  status                 ProjectStatus     @default(PLANNING)
-  projectType            ProjectType       @default(CONSTRUCTION)
+  status                 ProjectStatus @default(PLANNING)
+  projectType            ProjectType   @default(CONSTRUCTION)
   description            String?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   materials        Material[]
   cashIns          CashIn[]
@@ -82,17 +82,17 @@ model Project {
 }
 
 model Supplier {
-  id             String            @id @default(uuid())
+  id             String   @id @default(uuid())
   name           String
   companyName    String?
   phoneNumber    String
   email          String?
   address        String?
-  openingBalance String            @default("0.0") // Encrypted float
-  currentDue     String            @default("0.0") // Encrypted float
+  openingBalance String   @default("0.0") // Encrypted float
+  currentDue     String   @default("0.0") // Encrypted float
   notes          String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   materials          Material[]
   cashOuts           CashOut[]
@@ -103,18 +103,18 @@ model Supplier {
 }
 
 model Vendor {
-  id             String          @id @default(uuid())
+  id             String   @id @default(uuid())
   name           String
   companyName    String?
   contactNumber  String
   address        String?
   workType       String // e.g. Civil, Electrical, Plumbing
-  contractAmount String          @default("0.0") // Encrypted float
-  paidAmount     String          @default("0.0") // Encrypted float
-  dueAmount      String          @default("0.0") // Encrypted float
+  contractAmount String   @default("0.0") // Encrypted float
+  paidAmount     String   @default("0.0") // Encrypted float
+  dueAmount      String   @default("0.0") // Encrypted float
   notes          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   cashOuts           CashOut[]
   documents          Document[]
@@ -124,8 +124,8 @@ model Vendor {
 }
 
 model Employee {
-  id               String     @id @default(uuid())
-  employeeId       String     @unique // custom ID like EMP-001
+  id               String   @id @default(uuid())
+  employeeId       String   @unique // custom ID like EMP-001
   fullName         String
   designation      String
   department       String
@@ -133,9 +133,9 @@ model Employee {
   email            String?
   joiningDate      DateTime
   monthlySalary    String // Encrypted float
-  employmentStatus String     @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  employmentStatus String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   salaries  Salary[]
   cashOuts  CashOut[]
@@ -145,16 +145,16 @@ model Employee {
 }
 
 model Labour {
-  id               String       @id @default(uuid())
+  id               String   @id @default(uuid())
   name             String
   phoneNumber      String
   trade            String // e.g. Mason, Electrician, Helper
   dailyWage        String // Encrypted float
-  employmentStatus String       @default("ACTIVE") // ACTIVE, INACTIVE
+  employmentStatus String   @default("ACTIVE") // ACTIVE, INACTIVE
   projectId        String
-  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   attendances Attendance[]
   cashOuts    CashOut[]
@@ -221,10 +221,10 @@ model CashIn {
 }
 
 model CashOut {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   date            DateTime
   projectId       String?
-  project         Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   expenseCategory String // e.g. MATERIALS, LABOR, EMPLOYEE_SALARY, CONTRACTOR_PAYMENT, OFFICE_RENT, UTILITIES, TRANSPORTATION, FUEL, EQUIPMENT_RENTAL, MISCELLANEOUS
   paidTo          String
   amount          String // Encrypted float
@@ -354,4 +354,90 @@ model ProjectSupplier {
   updatedAt      DateTime @updatedAt
 
   @@unique([projectId, supplierId])
+}
+
+// ==========================================
+// WEBSITE MANAGEMENT CMS MODELS
+// ==========================================
+
+model WebsiteSettings {
+  id        String   @id @default(uuid())
+  key       String   @unique // "BRAND_INFO", "SOCIAL_LINKS", "GLOBAL_STATS"
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model WebsiteSection {
+  id          String   @id @default(uuid())
+  sectionKey  String   @unique // "HERO", "ABOUT_FIRM"
+  title       String?
+  subtitle    String?
+  highlight   String?
+  description String?  @db.Text
+  imageUrl    String?
+  videoUrl    String?
+  extraData   Json?
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+model WebsiteService {
+  id          String  @id @default(uuid())
+  title       String
+  description String  @db.Text
+  imageUrl    String
+  order       Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+model WebsitePortfolio {
+  id             String  @id @default(uuid())
+  title          String
+  category       String
+  coverImage     String
+  beforeImage    String?
+  afterImage     String?
+  theChallenge   String? @db.Text
+  theSolution    String? @db.Text
+  theOutcome     String? @db.Text
+  projectMetrics Json? // e.g. { timeline: "6 months", budget: "$500k" }
+  order          Int     @default(0)
+  isActive       Boolean @default(true)
+}
+
+model WebsiteTeam {
+  id       String  @id @default(uuid())
+  name     String
+  role     String
+  bio      String? @db.Text
+  imageUrl String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+}
+
+model WebsiteTrustBadge {
+  id       String  @id @default(uuid())
+  name     String
+  type     String // "AWARD", "CERTIFICATION", "PARTNER_LOGO"
+  imageUrl String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+}
+
+model WebsiteTestimonial {
+  id          String  @id @default(uuid())
+  clientName  String
+  clientRole  String
+  reviewText  String  @db.Text
+  portfolioId String? // Optional relation to link review to a specific project
+  order       Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+model WebsiteFAQ {
+  id       String  @id @default(uuid())
+  question String
+  answer   String  @db.Text
+  order    Int     @default(0)
+  isActive Boolean @default(true)
 }

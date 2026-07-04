@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Building2
 } from 'lucide-react';
+import Navbar from '@/components/website/Navbar';
 
 // --- Real data from Facebook page: facebook.com/metaphoricarchitect ---
 const BRAND = {
@@ -163,6 +164,50 @@ export default function PortfolioLanding() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const [dynamicBrand, setDynamicBrand] = useState(BRAND);
+  const [services, setServices] = useState<any[]>([]);
+  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [team, setTeam] = useState<any[]>([]);
+  const [trustBadges, setTrustBadges] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
+
+  const [dynamicHero, setDynamicHero] = useState({
+    subtitle: 'Architecture · Design · Planning · Dhaka',
+    title: BRAND.heroLine1,
+    highlight: BRAND.heroLine2,
+    description: BRAND.studioDesc,
+    imageUrl: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2800&q=80',
+    videoUrl: ''
+  });
+
+  useEffect(() => {
+    fetch('/api/website/public')
+      .then(res => res.json())
+      .then(json => {
+        if (json?.data?.settings?.BRAND_INFO) {
+          setDynamicBrand({ ...BRAND, ...json.data.settings.BRAND_INFO });
+        }
+        if (json?.data?.sections?.find((s: any) => s.sectionKey === 'HERO')) {
+          const hero = json.data.sections.find((s: any) => s.sectionKey === 'HERO');
+          setDynamicHero({
+            subtitle: hero.subtitle || 'Architecture · Design · Planning · Dhaka',
+            title: hero.title || BRAND.heroLine1,
+            highlight: hero.highlight || BRAND.heroLine2,
+            description: hero.description || BRAND.studioDesc,
+            imageUrl: hero.imageUrl || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2800&q=80',
+            videoUrl: hero.videoUrl || ''
+          });
+        }
+        if (json?.data?.services) setServices(json.data.services);
+        if (json?.data?.portfolio) setPortfolio(json.data.portfolio);
+        if (json?.data?.team) setTeam(json.data.team);
+        if (json?.data?.trustBadges) setTrustBadges(json.data.trustBadges);
+        if (json?.data?.testimonials) setTestimonials(json.data.testimonials);
+        if (json?.data?.faqs) setFaqs(json.data.faqs);
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -189,70 +234,7 @@ export default function PortfolioLanding() {
       <CustomCursor />
       
       {/* --- NAVIGATION --- */}
-      <nav className={`fixed w-full z-50 transition-all duration-700 ${scrolled ? 'bg-[#141210]/95 backdrop-blur-xl border-b border-[#D4AF37]/10 py-4' : 'bg-transparent py-8'}`}>
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="flex justify-between items-center">
-            {/* Logo */}
-            <a href="#" className="flex items-center gap-4 group cursor-pointer cursor-expand">
-              <div className="h-12 w-12 border border-[#D4AF37]/30 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 group-hover:border-[#D4AF37]">
-                <Building2 className="h-5 w-5 text-[#D4AF37]" strokeWidth={1.5} />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-playfair tracking-[0.1em] text-[#FDFBF7] uppercase leading-none">
-                  {BRAND.name}
-                </span>
-                <span className="text-[9px] font-medium tracking-[0.4em] text-[#D4AF37] uppercase leading-none mt-2">
-                  {BRAND.tagline}
-                </span>
-              </div>
-            </a>
-
-            {/* Desktop Links */}
-            <div className="hidden md:flex items-center gap-12">
-              {['Design', 'Portfolio', 'Studio', 'Contact'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-xs font-light tracking-[0.2em] text-[#A69F95] uppercase hover:text-[#D4AF37] transition-colors relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-[1px] after:bg-[#D4AF37] hover:after:w-full after:transition-all after:duration-500">
-                  {item}
-                </a>
-              ))}
-
-              {/* FB Social badge */}
-              <a href={BRAND.facebook} target="_blank" rel="noopener noreferrer" className="hidden lg:flex items-center gap-2 text-[9px] text-[#A69F95] tracking-widest uppercase hover:text-[#D4AF37] transition-colors">
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                {BRAND.followers} Fans
-              </a>
-              
-              <div className="h-8 w-[1px] bg-[#D4AF37]/20 mx-4"></div>
-              
-              <Link href={isLoggedIn ? '/dashboard' : '/login'} className="px-8 py-3 text-[10px] font-medium tracking-[0.2em] uppercase text-[#141210] bg-[#D4AF37] hover:bg-[#E5C158] transition-all flex items-center gap-3 hover:shadow-[0_0_40px_rgba(212,175,55,0.2)]">
-                Login
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-
-            {/* Mobile Toggle */}
-            <button className="md:hidden text-[#D4AF37] p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X strokeWidth={1.5} /> : <Menu strokeWidth={1.5} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        <div className={`md:hidden absolute top-full left-0 w-full bg-[#141210]/98 backdrop-blur-3xl border-b border-[#D4AF37]/10 transition-all duration-500 overflow-hidden ${mobileMenuOpen ? 'max-h-[400px] py-8' : 'max-h-0 py-0'}`}>
-          <div className="flex flex-col gap-8 px-6">
-            {['Design', 'Portfolio', 'Studio', 'Contact'].map((item) => (
-              <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setMobileMenuOpen(false)} className="text-sm font-light tracking-[0.2em] text-[#E8E3DB] uppercase">
-                {item}
-              </a>
-            ))}
-            <a href={BRAND.facebook} target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="text-sm font-light tracking-[0.2em] text-[#A69F95] uppercase hover:text-[#D4AF37] transition-colors">
-              Facebook — {BRAND.followers} Fans
-            </a>
-            <Link href={isLoggedIn ? '/dashboard' : '/login'} onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center gap-3 text-[#D4AF37] text-sm font-medium tracking-widest uppercase mt-4">
-              Login <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* --- HERO SECTION --- */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
@@ -266,7 +248,7 @@ export default function PortfolioLanding() {
           {/* Hero Background Image - using img tag with Unsplash */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
-            src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2800&q=80" 
+            src={dynamicHero.imageUrl} 
             alt="Luxury Interior Hero" 
             className="w-full h-full object-cover hero-kenburns"
             onLoad={() => setHeroLoaded(true)}
@@ -323,7 +305,7 @@ export default function PortfolioLanding() {
                     transition: 'opacity 0.8s ease 0.6s, transform 0.8s ease 0.6s',
                   }}
                 >
-                  Architecture · Design · Planning · Dhaka
+                  {dynamicHero.subtitle}
                 </span>
               </div>
               
@@ -337,7 +319,7 @@ export default function PortfolioLanding() {
                     transition: 'opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s, transform 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s',
                   }}
                 >
-                  {BRAND.heroLine1}
+                  {dynamicHero.title}
                 </span>
                 {/* Solid white text */}
                 <span 
@@ -348,7 +330,7 @@ export default function PortfolioLanding() {
                     transition: 'opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.8s, transform 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.8s',
                   }}
                 >
-                  {BRAND.heroLine2}
+                  {dynamicHero.highlight}
                 </span>
               </h1>
             </div>
@@ -362,19 +344,19 @@ export default function PortfolioLanding() {
               }}
             >
               <p className="text-[#A69F95] text-sm leading-relaxed font-light">
-                Metaphoric Architect is a Dhaka-based firm delivering architecture, design, planning, construction &amp; consulting services across Bangladesh.
+                {dynamicHero.description}
               </p>
               
               <div className="flex items-center gap-6">
-                <button className="h-16 w-16 rounded-full border border-[#D4AF37]/40 flex items-center justify-center hover:bg-[#D4AF37] hover:text-[#141210] transition-all group backdrop-blur-md cursor-expand play-pulse">
+                <a href={dynamicHero.videoUrl || '#'} target="_blank" rel="noopener noreferrer" className="h-16 w-16 rounded-full border border-[#D4AF37]/40 flex items-center justify-center hover:bg-[#D4AF37] hover:text-[#141210] transition-all group backdrop-blur-md cursor-expand play-pulse">
                   <Play className="h-5 w-5 fill-current ml-1 group-hover:scale-110 transition-transform" />
-                </button>
+                </a>
                 <span className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#FDFBF7]">Play Film</span>
               </div>
 
               {/* Hero bottom stats */}
               <div className="flex gap-8 pt-4 border-t border-[#D4AF37]/10">
-                {[{ num: BRAND.projects, label: 'Projects' }, { num: BRAND.followers, label: 'FB Fans' }, { num: BRAND.satisfaction, label: 'Satisfaction' }].map((s) => (
+                {[{ num: dynamicBrand.projects, label: 'Projects' }, { num: dynamicBrand.followers, label: 'FB Fans' }, { num: dynamicBrand.satisfaction, label: 'Satisfaction' }].map((s) => (
                   <div key={s.label}>
                     <div className="text-2xl font-playfair text-[#D4AF37] italic">{s.num}</div>
                     <div className="text-[9px] tracking-[0.2em] text-[#8C8477] uppercase mt-1">{s.label}</div>
@@ -389,15 +371,19 @@ export default function PortfolioLanding() {
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#141210] to-transparent z-20"></div>
       </section>
 
-      {/* --- TRUSTED BY --- */}
+      {/* --- TRUSTED BY / CERTIFICATIONS --- */}
       <section className="border-b border-[#D4AF37]/10 bg-[#1A1816] py-16">
         <RevealSection className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
-          <p className="text-[9px] font-medium tracking-[0.4em] text-[#8C8477] uppercase mb-12">Featured in global design publications</p>
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 hover:opacity-90 transition-all duration-1000 cursor-expand">
-            {BRAND.services.map((svc) => (
-              <div key={svc} className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]/60"></div>
-                <h5 className="text-lg md:text-2xl font-playfair italic tracking-wider text-[#E8E3DB] hover:text-[#D4AF37] transition-colors">{svc}</h5>
+          <p className="text-[9px] font-medium tracking-[0.4em] text-[#8C8477] uppercase mb-12">Accredited certifications & awards</p>
+          <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-60 hover:opacity-90 transition-all duration-1000 cursor-expand">
+            {trustBadges.map((badge: any) => (
+              <div key={badge.id} className="flex flex-col items-center gap-2 filter grayscale hover:grayscale-0 transition-all">
+                {badge.imageUrl ? (
+                  <img src={badge.imageUrl} alt={badge.name} className="h-10 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+                ) : (
+                  <span className="text-sm tracking-wider font-light text-[#E8E3DB]">{badge.name}</span>
+                )}
+                <span className="text-[8px] tracking-widest text-[#8C8477] uppercase">{badge.name}</span>
               </div>
             ))}
           </div>
@@ -427,19 +413,19 @@ export default function PortfolioLanding() {
                 Spaces that speak <i className="text-[#D4AF37]">purpose</i>.
               </h3>
               <p className="text-[#A69F95] text-lg leading-relaxed font-light mb-12">
-                {BRAND.studioDesc}
+                {dynamicBrand.studioDesc}
               </p>
               
               <ul className="space-y-6 mb-16 border-l border-[#D4AF37]/20 pl-8">
-                {BRAND.services.map((item, i) => (
-                  <li key={i} className="flex items-center gap-4 text-[#E8E3DB] font-light tracking-wide text-sm">
+                {services.map((item: any) => (
+                  <li key={item.id} className="flex items-center gap-4 text-[#E8E3DB] font-light tracking-wide text-sm">
                     <div className="h-[1px] w-4 bg-[#D4AF37]"></div>
-                    {item}
+                    {item.title}
                   </li>
                 ))}
               </ul>
 
-              <a href={BRAND.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-6 text-[10px] font-medium tracking-[0.3em] uppercase text-[#FDFBF7] hover:text-[#D4AF37] transition-colors group">
+              <a href={dynamicBrand.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-6 text-[10px] font-medium tracking-[0.3em] uppercase text-[#FDFBF7] hover:text-[#D4AF37] transition-colors group">
                 Follow on Facebook
                 <span className="w-12 h-[1px] bg-[#FDFBF7] group-hover:bg-[#D4AF37] group-hover:w-20 transition-all duration-500"></span>
               </a>
@@ -456,45 +442,63 @@ export default function PortfolioLanding() {
               <span className="w-12 h-[1px] bg-[#D4AF37]"></span> 02. Services <span className="w-12 h-[1px] bg-[#D4AF37]"></span>
             </h2>
             <h3 className="text-4xl md:text-6xl font-playfair text-[#FDFBF7]">What We Build.</h3>
-            <p className="text-[#8C8477] text-sm mt-4 tracking-wide">{BRAND.city}</p>
+            <p className="text-[#8C8477] text-sm mt-4 tracking-wide">{dynamicBrand.city}</p>
           </RevealSection>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto md:h-[650px]">
-            {/* Main large card */}
-            <RevealSection delay={100} className="md:col-span-2 group relative overflow-hidden bg-[#141210] cursor-expand h-[400px] md:h-full">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=80" alt="Architecture & Planning" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#141210] via-[#141210]/20 to-transparent"></div>
-              <div className="absolute inset-0 p-12 flex flex-col justify-end">
-                <h4 className="text-4xl font-playfair text-[#FDFBF7] mb-4">Architecture &amp; Planning</h4>
-                <p className="text-[#A69F95] font-light max-w-md text-sm leading-relaxed">From conceptual design to urban planning — we shape the built environment of Dhaka and beyond.</p>
-              </div>
-            </RevealSection>
+            {services[0] && (
+              <Link href={`/services/${services[0].id}`} className="md:col-span-2 block h-[400px] md:h-full">
+                <RevealSection delay={100} className="group relative overflow-hidden bg-[#141210] cursor-expand h-full">
+                  <img src={services[0].imageUrl} alt={services[0].title} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#141210] via-[#141210]/20 to-transparent"></div>
+                  <div className="absolute inset-0 p-12 flex flex-col justify-end">
+                    <h4 className="text-4xl font-playfair text-[#FDFBF7] mb-4 group-hover:text-[#D4AF37] transition-colors">{services[0].title}</h4>
+                    <p className="text-[#A69F95] font-light max-w-md text-sm leading-relaxed">{services[0].description}</p>
+                    <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium mt-4 flex items-center gap-2">View Details <ArrowRight className="h-3 w-3" /></span>
+                  </div>
+                </RevealSection>
+              </Link>
+            )}
 
             <div className="flex flex-col gap-4">
-              {/* Secondary card 1 */}
-              <RevealSection delay={200} className="flex-1 group relative overflow-hidden bg-[#141210] cursor-expand h-[300px] md:h-auto">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80" alt="Interior Design" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#141210] to-transparent"></div>
-                <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                  <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-3">Interior Design</h4>
-                  <p className="text-[#A69F95] text-xs font-light leading-relaxed">Spatial storytelling through material, light, and form.</p>
-                </div>
-              </RevealSection>
+              {services[1] && (
+                <Link href={`/services/${services[1].id}`} className="flex-1 block h-[300px] md:h-auto">
+                  <RevealSection delay={200} className="group relative overflow-hidden bg-[#141210] cursor-expand h-full">
+                    <img src={services[1].imageUrl} alt={services[1].title} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141210] to-transparent"></div>
+                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                      <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-3 group-hover:text-[#D4AF37] transition-colors">{services[1].title}</h4>
+                      <p className="text-[#A69F95] text-xs font-light leading-relaxed">{services[1].description}</p>
+                      <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium mt-2 flex items-center gap-2">View Details <ArrowRight className="h-3 w-3" /></span>
+                    </div>
+                  </RevealSection>
+                </Link>
+              )}
 
-              {/* Secondary card 2 */}
-              <RevealSection delay={300} className="flex-1 group relative overflow-hidden bg-[#141210] cursor-expand h-[300px] md:h-auto">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80" alt="Construction" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#141210] to-transparent"></div>
-                <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                  <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-3">Construction</h4>
-                  <p className="text-[#A69F95] text-xs font-light leading-relaxed">End-to-end construction management and consulting.</p>
-                </div>
-              </RevealSection>
+              {services[2] && (
+                <Link href={`/services/${services[2].id}`} className="flex-1 block h-[300px] md:h-auto">
+                  <RevealSection delay={300} className="group relative overflow-hidden bg-[#141210] cursor-expand h-full">
+                    <img src={services[2].imageUrl} alt={services[2].title} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141210] to-transparent"></div>
+                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                      <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-3 group-hover:text-[#D4AF37] transition-colors">{services[2].title}</h4>
+                      <p className="text-[#A69F95] text-xs font-light leading-relaxed">{services[2].description}</p>
+                      <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium mt-2 flex items-center gap-2">View Details <ArrowRight className="h-3 w-3" /></span>
+                    </div>
+                  </RevealSection>
+                </Link>
+              )}
             </div>
           </div>
+
+          {/* View All Services CTA */}
+          <RevealSection delay={200} className="mt-20 flex justify-center">
+            <Link href="/services" className="group inline-flex items-center gap-8 px-16 py-6 border border-[#D4AF37]/30 text-[10px] font-medium tracking-[0.3em] uppercase text-[#FDFBF7] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all duration-500 relative overflow-hidden">
+              <span className="absolute inset-0 bg-[#D4AF37]/5 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500"></span>
+              <span className="relative">View All Services</span>
+              <ArrowRight className="h-3 w-3 relative group-hover:translate-x-2 transition-transform" />
+            </Link>
+          </RevealSection>
         </div>
       </section>
 
@@ -509,118 +513,107 @@ export default function PortfolioLanding() {
           </RevealSection>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-24">
-            {/* Project 1 */}
-            <RevealSection delay={100} className="group cursor-pointer cursor-expand portfolio-card">
-              <div className="relative overflow-hidden aspect-[4/5] mb-8">
-                <div className="absolute inset-0 bg-[#D4AF37]/10 mix-blend-overlay z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#141210]/60 via-transparent to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" 
-                  alt="The Oak & Ash Residence" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s] ease-out" 
-                />
-                {/* Hover overlay label */}
-                <div className="absolute bottom-8 left-8 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-                  <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium">View Project</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
-                <div>
-                  <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">The Oak &amp; Ash Residence</h4>
-                  <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">Minimalist Sanctuary</p>
-                </div>
-                <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
-                  <ArrowRight strokeWidth={1} />
-                </div>
-              </div>
-            </RevealSection>
-
-            {/* Project 2 */}
-            <RevealSection delay={300} className="group cursor-pointer cursor-expand portfolio-card md:mt-32">
-              <div className="relative overflow-hidden aspect-[4/5] mb-8">
-                <div className="absolute inset-0 bg-[#D4AF37]/10 mix-blend-overlay z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#141210]/60 via-transparent to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src="https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?auto=format&fit=crop&w=1200&q=80" 
-                  alt="Penthouse Noir" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s] ease-out" 
-                />
-                <div className="absolute bottom-8 left-8 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-                  <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium">View Project</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
-                <div>
-                  <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">Penthouse Noir</h4>
-                  <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">Moody Monochrome</p>
-                </div>
-                <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
-                  <ArrowRight strokeWidth={1} />
-                </div>
-              </div>
-            </RevealSection>
-
-            {/* Project 3 */}
-            <RevealSection delay={100} className="group cursor-pointer cursor-expand portfolio-card">
-              <div className="relative overflow-hidden aspect-[4/5] mb-8">
-                <div className="absolute inset-0 bg-[#D4AF37]/10 mix-blend-overlay z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src="https://images.unsplash.com/photo-1631679706909-1844bbd07221?auto=format&fit=crop&w=1200&q=80" 
-                  alt="The Jade Studio" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s] ease-out" 
-                />
-                <div className="absolute bottom-8 left-8 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-                  <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium">View Project</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
-                <div>
-                  <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">The Jade Studio</h4>
-                  <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">Contemporary Calm</p>
-                </div>
-                <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
-                  <ArrowRight strokeWidth={1} />
-                </div>
-              </div>
-            </RevealSection>
-
-            {/* Project 4 */}
-            <RevealSection delay={300} className="group cursor-pointer cursor-expand portfolio-card md:mt-32">
-              <div className="relative overflow-hidden aspect-[4/5] mb-8">
-                <div className="absolute inset-0 bg-[#D4AF37]/10 mix-blend-overlay z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src="https://images.unsplash.com/photo-1567538096621-38d2284b23ff?auto=format&fit=crop&w=1200&q=80" 
-                  alt="Soleil Retreat" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s] ease-out" 
-                />
-                <div className="absolute bottom-8 left-8 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-                  <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium">View Project</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
-                <div>
-                  <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">Soleil Retreat</h4>
-                  <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">Warm Provençal</p>
-                </div>
-                <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
-                  <ArrowRight strokeWidth={1} />
-                </div>
-              </div>
-            </RevealSection>
+            {portfolio.map((proj: any, i: number) => (
+              <RevealSection key={proj.id} delay={i % 2 === 0 ? 100 : 300} className={`group cursor-pointer cursor-expand portfolio-card ${i % 2 !== 0 ? 'md:mt-32' : ''}`}>
+                <Link href={`/portfolio/${proj.id}`} className="block">
+                  <div className="relative overflow-hidden aspect-[4/5] mb-8">
+                    <div className="absolute inset-0 bg-[#D4AF37]/10 mix-blend-overlay z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141210]/60 via-transparent to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                    <img 
+                      src={proj.coverImage} 
+                      alt={proj.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s] ease-out" 
+                    />
+                    <div className="absolute bottom-8 left-8 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                      <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium">View Project</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
+                    <div>
+                      <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">{proj.title}</h4>
+                      <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">{proj.category}</p>
+                    </div>
+                    <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
+                      <ArrowRight strokeWidth={1} />
+                    </div>
+                  </div>
+                </Link>
+              </RevealSection>
+            ))}
           </div>
 
           {/* View All CTA */}
           <RevealSection delay={200} className="mt-24 flex justify-center">
-            <a href="#" className="group inline-flex items-center gap-8 px-16 py-6 border border-[#D4AF37]/30 text-[10px] font-medium tracking-[0.3em] uppercase text-[#FDFBF7] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all duration-500 relative overflow-hidden">
+            <Link href="/portfolio" className="group inline-flex items-center gap-8 px-16 py-6 border border-[#D4AF37]/30 text-[10px] font-medium tracking-[0.3em] uppercase text-[#FDFBF7] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all duration-500 relative overflow-hidden">
               <span className="absolute inset-0 bg-[#D4AF37]/5 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500"></span>
               <span className="relative">View All Projects</span>
               <ArrowRight className="h-3 w-3 relative group-hover:translate-x-2 transition-transform" />
-            </a>
+            </Link>
           </RevealSection>
+        </div>
+      </section>
+
+      {/* --- TEAM & LEADERSHIP --- */}
+      <section id="team" className="py-32 border-t border-[#D4AF37]/10">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <RevealSection className="mb-20">
+            <h2 className="text-[10px] font-medium tracking-[0.4em] text-[#D4AF37] uppercase mb-8 flex items-center gap-6">
+              <span className="w-12 h-[1px] bg-[#D4AF37]"></span> 04. Our Team
+            </h2>
+            <h3 className="text-4xl md:text-6xl font-playfair text-[#FDFBF7]">The Visionaries.</h3>
+          </RevealSection>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {team.map((member: any, i: number) => (
+              <RevealSection key={member.id} delay={i * 150} className="group cursor-expand flex flex-col justify-between p-4 bg-[#1A1816] border border-[#D4AF37]/5 hover:border-[#D4AF37]/20 transition-all duration-500">
+                <Link href={`/team/${member.id}`} className="block">
+                  <div className="relative overflow-hidden aspect-[4/5] mb-8 bg-[#1A1816]">
+                    <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
+                  </div>
+                  <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors">{member.name}</h4>
+                  <p className="text-[10px] text-[#D4AF37] tracking-[0.2em] uppercase mb-4">{member.role}</p>
+                  <p className="text-[#A69F95] text-sm font-light leading-relaxed line-clamp-3">{member.bio}</p>
+                </Link>
+              </RevealSection>
+            ))}
+          </div>
+
+          {/* View All Team CTA */}
+          <RevealSection delay={200} className="mt-20 flex justify-center">
+            <Link href="/team" className="group inline-flex items-center gap-8 px-16 py-6 border border-[#D4AF37]/30 text-[10px] font-medium tracking-[0.3em] uppercase text-[#FDFBF7] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all duration-500 relative overflow-hidden">
+              <span className="absolute inset-0 bg-[#D4AF37]/5 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500"></span>
+              <span className="relative">View All Team</span>
+              <ArrowRight className="h-3 w-3 relative group-hover:translate-x-2 transition-transform" />
+            </Link>
+          </RevealSection>
+        </div>
+      </section>
+
+      {/* --- FREQUENTLY ASKED QUESTIONS --- */}
+      <section className="py-32 border-t border-[#D4AF37]/10 bg-[#1A1816]">
+        <div className="max-w-[1000px] mx-auto px-6">
+          <RevealSection className="text-center mb-20">
+            <h2 className="text-[10px] font-medium tracking-[0.4em] text-[#D4AF37] uppercase mb-8 flex items-center gap-6 justify-center">
+              <span className="w-12 h-[1px] bg-[#D4AF37]"></span> 06. Inquiries <span className="w-12 h-[1px] bg-[#D4AF37]"></span>
+            </h2>
+            <h3 className="text-4xl md:text-5xl font-playfair text-[#FDFBF7]">Frequently Asked Questions</h3>
+          </RevealSection>
+
+          <div className="space-y-6">
+            {faqs.map((faq: any, i: number) => (
+              <RevealSection key={faq.id} delay={i * 100} className="border-b border-[#D4AF37]/10 pb-6">
+                <details className="group cursor-pointer">
+                  <summary className="flex justify-between items-center text-lg font-medium text-[#E8E3DB] hover:text-[#D4AF37] transition-colors focus:outline-none list-none">
+                    <span className="font-playfair leading-relaxed">{faq.question}</span>
+                    <span className="text-[#D4AF37] transition-transform duration-300 group-open:rotate-45 text-2xl font-light">+</span>
+                  </summary>
+                  <p className="text-[#A69F95] text-sm font-light leading-relaxed mt-4 pl-4 border-l border-[#D4AF37]/20 select-text">
+                    {faq.answer}
+                  </p>
+                </details>
+              </RevealSection>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -629,25 +622,21 @@ export default function PortfolioLanding() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
           <RevealSection className="flex flex-col items-center text-center mb-24">
             <h2 className="text-[10px] font-medium tracking-[0.4em] text-[#D4AF37] uppercase mb-8 flex items-center gap-6 justify-center">
-              <span className="w-12 h-[1px] bg-[#D4AF37]"></span> 04. Praise <span className="w-12 h-[1px] bg-[#D4AF37]"></span>
+              <span className="w-12 h-[1px] bg-[#D4AF37]"></span> 05. Praise <span className="w-12 h-[1px] bg-[#D4AF37]"></span>
             </h2>
           </RevealSection>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { name: "Eleanor Vance", role: "Homeowner", text: "They transformed our chaotic house into a serene, tactile haven. The attention to natural light and warm textures is simply poetic." },
-              { name: "Julian Rossi", role: "Boutique Hotelier", text: "Their interior architecture completely elevated our guest experience. Every material feels intentional and luxurious." },
-              { name: "Sophie Chen", role: "Art Collector", text: "They designed a space that doesn't just display art, but feels like art itself. A masterclass in organic minimalism." }
-            ].map((review, i) => (
-              <RevealSection key={i} delay={i * 200} className="border border-[#D4AF37]/10 p-12 relative group hover:border-[#D4AF37]/40 transition-colors duration-500 cursor-expand bg-[#141210]">
+            {testimonials.map((review: any, i: number) => (
+              <RevealSection key={review.id} delay={i * 200} className="border border-[#D4AF37]/10 p-12 relative group hover:border-[#D4AF37]/40 transition-colors duration-500 cursor-expand bg-[#141210]">
                 <div className="text-8xl text-[#D4AF37]/20 absolute top-4 left-6 font-playfair leading-none italic">"</div>
                 <p className="text-[#E8E3DB] font-light leading-loose mb-12 relative z-10 text-sm">
-                  {review.text}
+                  {review.reviewText}
                 </p>
                 <div className="flex items-center gap-6 relative z-10 pt-6 border-t border-[#D4AF37]/10">
                   <div>
-                    <h5 className="text-[#FDFBF7] text-sm font-medium mb-1">{review.name}</h5>
-                    <p className="text-[9px] text-[#D4AF37] tracking-[0.2em] uppercase">{review.role}</p>
+                    <h5 className="text-[#FDFBF7] text-sm font-medium mb-1">{review.clientName}</h5>
+                    <p className="text-[9px] text-[#D4AF37] tracking-[0.2em] uppercase">{review.clientRole}</p>
                   </div>
                 </div>
               </RevealSection>
@@ -671,22 +660,22 @@ export default function PortfolioLanding() {
               <div className="space-y-10">
                 <div>
                   <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Email</h5>
-                  <a href={`mailto:${BRAND.email}`} className="text-xl font-playfair italic text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand">
-                    {BRAND.email}
+                  <a href={`mailto:${dynamicBrand.email}`} className="text-xl font-playfair italic text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand">
+                    {dynamicBrand.email}
                   </a>
                 </div>
                 <div>
                   <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Location</h5>
                   <p className="text-lg font-light text-[#E8E3DB] leading-relaxed">
-                    {BRAND.address}
+                    {dynamicBrand.address}
                   </p>
                 </div>
                 <div>
                   <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Follow</h5>
-                  <a href={BRAND.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand">
+                  <a href={dynamicBrand.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand">
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                     <span className="font-playfair italic text-lg">metaphoricarchitect</span>
-                    <span className="text-[#D4AF37] text-xs tracking-widest">({BRAND.followers} fans)</span>
+                    <span className="text-[#D4AF37] text-xs tracking-widest">({dynamicBrand.followers} fans)</span>
                   </a>
                 </div>
               </div>
@@ -743,10 +732,17 @@ export default function PortfolioLanding() {
                 <div>
                   <label className="block text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Project Scope</label>
                   <select name="scope" required className="w-full bg-transparent border-b border-[#D4AF37]/20 pb-4 text-[#E8E3DB] focus:outline-none focus:border-[#D4AF37] transition-colors font-light text-sm appearance-none cursor-pointer">
-                    <option className="bg-[#1A1816]">Architecture & Planning</option>
-                    <option className="bg-[#1A1816]">Interior Design</option>
-                    <option className="bg-[#1A1816]">Construction Management</option>
-                    <option className="bg-[#1A1816]">Consulting</option>
+                    {services.map((svc: any) => (
+                      <option key={svc.id} value={svc.title} className="bg-[#1A1816] text-[#E8E3DB]">
+                        {svc.title}
+                      </option>
+                    ))}
+                    {services.length === 0 && (
+                      <>
+                        <option className="bg-[#1A1816]">Architecture & Planning</option>
+                        <option className="bg-[#1A1816]">Interior Design</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -761,10 +757,10 @@ export default function PortfolioLanding() {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-medium tracking-widest uppercase text-[#8C8477] border-t border-[#D4AF37]/10 pt-10">
-            <p>&copy; {new Date().getFullYear()} {BRAND.nameAlt} — {BRAND.city}</p>
+            <p>&copy; {new Date().getFullYear()} {dynamicBrand.nameAlt} — {dynamicBrand.city}</p>
             <div className="flex gap-10">
-              <a href={BRAND.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-[#D4AF37] transition-colors">Facebook</a>
-              <a href={BRAND.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-[#D4AF37] transition-colors">Instagram</a>
+              <a href={dynamicBrand.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-[#D4AF37] transition-colors">Facebook</a>
+              <a href={dynamicBrand.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-[#D4AF37] transition-colors">Instagram</a>
             </div>
           </div>
         </div>

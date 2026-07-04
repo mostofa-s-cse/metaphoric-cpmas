@@ -22,7 +22,8 @@ import {
   Settings,
   ShieldCheck,
   MessageSquare,
-  History
+  History,
+  Globe
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -87,6 +88,12 @@ const navItems: NavItem[] = [
     href: '/dashboard/reports',
     icon: TrendingUp,
     roles: ['SUPER_ADMIN'],
+  },
+  {
+    name: 'Website Management',
+    href: '/dashboard/website',
+    icon: Globe,
+    roles: ['SUPER_ADMIN', 'ADMIN'],
   },
   {
     name: 'User Management',

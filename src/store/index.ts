@@ -7,15 +7,17 @@ import { setupListeners } from '@reduxjs/toolkit/query';
 import authReducer from './slices/authSlice';
 import uiReducer from './slices/uiSlice';
 import { cpmasApi } from './api/cpmasApi';
+import { websiteApi } from './api/websiteApi';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     ui: uiReducer,
     [cpmasApi.reducerPath]: cpmasApi.reducer,
+    [websiteApi.reducerPath]: websiteApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(cpmasApi.middleware),
+    getDefaultMiddleware().concat(cpmasApi.middleware, websiteApi.middleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 
