@@ -173,7 +173,7 @@ async function postHandler(request: Request) {
       projectLocation,
       startDate: new Date(startDate),
       expectedCompletionDate: new Date(expectedCompletionDate),
-      estimatedBudget: parseFloat(estimatedBudget),
+      estimatedBudget: parseFloat(estimatedBudget) as any,
       status: status || 'PLANNING',
       projectType,
       description,

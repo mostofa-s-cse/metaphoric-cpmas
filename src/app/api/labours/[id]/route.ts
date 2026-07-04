@@ -42,7 +42,7 @@ async function putHandler(
       name: name || undefined,
       phoneNumber: phoneNumber || undefined,
       trade: trade || undefined,
-      dailyWage: dailyWage ? parseFloat(dailyWage) : undefined,
+      dailyWage: dailyWage ? (parseFloat(dailyWage) as any) : undefined,
       projectId: projectId || undefined,
       employmentStatus: employmentStatus || undefined,
     },

@@ -36,12 +36,17 @@ async function deleteHandler(
 
   // Adjust supplier's due balance (deduct the material totalPrice)
   if (material.supplierId) {
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: material.supplierId },
+      select: { currentDue: true },
+    });
+    const currentDueNum = supplier ? Number(supplier.currentDue) : 0.0;
+    const materialTotal = Number(material.totalPrice);
+
     await prisma.supplier.update({
       where: { id: material.supplierId },
       data: {
-        currentDue: {
-          decrement: material.totalPrice,
-        },
+        currentDue: String(currentDueNum - materialTotal),
       },
     });
   }

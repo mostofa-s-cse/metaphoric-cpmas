@@ -101,8 +101,8 @@ async function postHandler(request: Request) {
       phoneNumber,
       email,
       address,
-      openingBalance: oBalance,
-      currentDue: totalDue,
+      openingBalance: oBalance as any,
+      currentDue: totalDue as any,
       notes,
     },
   });
@@ -115,9 +115,9 @@ async function postHandler(request: Request) {
         return {
           supplierId: supplier.id,
           projectId: a.projectId,
-          contractAmount: actAmt,
-          paidAmount: pdAmt,
-          dueAmount: actAmt - pdAmt,
+          contractAmount: actAmt as any,
+          paidAmount: pdAmt as any,
+          dueAmount: (actAmt - pdAmt) as any,
         };
       }),
     });

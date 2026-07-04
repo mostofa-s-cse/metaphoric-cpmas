@@ -59,9 +59,27 @@ async function getHandler(request: NextRequest) {
     prisma.employee.count({ where }),
   ]);
 
+  // Role based financial salary access filter
+  const hasSalaryAccess = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'ACCOUNTANT';
+  const sanitizedEmployees = employees.map((emp) => {
+    if (!hasSalaryAccess) {
+      return {
+        ...emp,
+        monthlySalary: 0,
+        salaries: emp.salaries.map((sal) => ({
+          ...sal,
+          netSalary: 0,
+          paidAmount: 0,
+          dueAmount: 0,
+        })),
+      };
+    }
+    return emp;
+  });
+
   return apiPaginated(
     'employees',
-    employees,
+    sanitizedEmployees,
     total,
     page,
     limit,
@@ -98,18 +116,10 @@ async function postHandler(request: Request) {
       designation,
       department,
       phoneNumber,
-      email,
+      email: email || null,
       joiningDate: new Date(joiningDate),
-      monthlySalary: parseFloat(monthlySalary),
+      monthlySalary: parseFloat(monthlySalary) as any,
       employmentStatus: employmentStatus || 'ACTIVE',
-    },
-  });
-
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      action: 'CREATE_EMPLOYEE',
-      details: `Registered employee: ${employee.fullName} (${employee.employeeId})`,
     },
   });
 

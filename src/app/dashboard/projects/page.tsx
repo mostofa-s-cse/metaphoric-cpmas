@@ -12,6 +12,8 @@ import { Drawer } from '@/components/ui/Drawer';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -357,28 +359,25 @@ export default function ProjectsPage() {
 
       {/* Filter and search bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="sm:col-span-2 relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input
-            type="text"
+        <div className="sm:col-span-2">
+          <Input
             placeholder="Search by project name, code, client name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
+            icon={<Search className="h-4 w-4" />}
           />
         </div>
 
-        <select
+        <Select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3.5 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-400 focus:outline-none text-xs transition-all cursor-pointer"
         >
-          <option value="ALL">All Statuses</option>
-          <option value="PLANNING">PLANNING</option>
-          <option value="RUNNING">RUNNING</option>
-          <option value="COMPLETED">COMPLETED</option>
-          <option value="ARCHIVED">ARCHIVED</option>
-        </select>
+          <option value="ALL" className="bg-slate-900 text-slate-200">All Statuses</option>
+          <option value="PLANNING" className="bg-slate-900 text-slate-200">PLANNING</option>
+          <option value="RUNNING" className="bg-slate-900 text-slate-200">RUNNING</option>
+          <option value="COMPLETED" className="bg-slate-900 text-slate-200">COMPLETED</option>
+          <option value="ARCHIVED" className="bg-slate-900 text-slate-200">ARCHIVED</option>
+        </Select>
       </div>
 
       {/* Main Content Area */}
@@ -705,87 +704,51 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Project Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('name')}
                     placeholder="e.g. Skyline Heights"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.name
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.name?.message}
                   />
-                  {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Project Code</label>
-                  <input
-                    type="text"
+                  <Input
                     disabled={modalMode === 'edit'}
                     {...register('code')}
                     placeholder="e.g. PRJ-SKY-001"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all disabled:opacity-50 ${
-                      errors.code
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.code?.message}
                   />
-                  {errors.code && <p className="text-rose-400 text-[10px] mt-1">{errors.code.message}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Client Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('clientName')}
                     placeholder="e.g. Vertex Devs Ltd"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.clientName
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.clientName?.message}
                   />
-                  {errors.clientName && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.clientName.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Client Contact</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('clientContactNumber')}
                     placeholder="e.g. +1 555-1234"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.clientContactNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.clientContactNumber?.message}
                   />
-                  {errors.clientContactNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.clientContactNumber.message}</p>
-                  )}
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-400 text-xs font-semibold mb-2">Location</label>
-                <input
-                  type="text"
+                <Input
                   {...register('projectLocation')}
                   placeholder="e.g. 12 Bridge Lane, West Side"
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    errors.projectLocation
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
+                  error={errors.projectLocation?.message}
                 />
-                {errors.projectLocation && (
-                  <p className="text-rose-400 text-[10px] mt-1">{errors.projectLocation.message}</p>
-                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -827,57 +790,39 @@ export default function ProjectsPage() {
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Est. Budget ($)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('estimatedBudget')}
                     placeholder="e.g. 1500000"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.estimatedBudget
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.estimatedBudget?.message}
                   />
-                  {errors.estimatedBudget && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.estimatedBudget.message}</p>
-                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Current Status</label>
-                  <select
+                  <Select
                     {...register('status')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.status
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.status?.message}
                   >
-                    <option value="PLANNING">PLANNING</option>
-                    <option value="RUNNING">RUNNING</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="ARCHIVED">ARCHIVED</option>
-                  </select>
-                  {errors.status && <p className="text-rose-400 text-[10px] mt-1">{errors.status.message}</p>}
+                    <option value="PLANNING" className="bg-slate-900 text-slate-200">PLANNING</option>
+                    <option value="RUNNING" className="bg-slate-900 text-slate-200">RUNNING</option>
+                    <option value="COMPLETED" className="bg-slate-900 text-slate-200">COMPLETED</option>
+                    <option value="ARCHIVED" className="bg-slate-900 text-slate-200">ARCHIVED</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Project Type</label>
-                  <select
+                  <Select
                     {...register('projectType')}
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.projectType
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.projectType?.message}
                   >
-                    <option value="CONSULTANCY">Consultancy</option>
-                    <option value="SUPERVISION">Supervision</option>
-                    <option value="CONSTRUCTION">Construction</option>
-                    <option value="SUPPLYING">Supplying</option>
-                  </select>
-                  {errors.projectType && <p className="text-rose-400 text-[10px] mt-1">{errors.projectType.message}</p>}
+                    <option value="CONSULTANCY" className="bg-slate-900 text-slate-200">Consultancy</option>
+                    <option value="SUPERVISION" className="bg-slate-900 text-slate-200">Supervision</option>
+                    <option value="CONSTRUCTION" className="bg-slate-900 text-slate-200">Construction</option>
+                    <option value="SUPPLYING" className="bg-slate-900 text-slate-200">Supplying</option>
+                  </Select>
                 </div>
               </div>
 
@@ -887,7 +832,7 @@ export default function ProjectsPage() {
                   rows={3}
                   {...register('description')}
                   placeholder="Enter project summary details..."
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  className={`w-full px-3 py-2 bg-slate-950/40 border border-slate-800 focus:border-cyan-500/80 focus:ring-cyan-500/30 rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all placeholder:text-slate-650 shadow-inner ${
                     errors.description
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
                       : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'

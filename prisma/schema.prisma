@@ -53,28 +53,28 @@ model User {
 }
 
 model Project {
-  id                     String        @id @default(uuid())
+  id                     String            @id @default(uuid())
   name                   String
-  code                   String        @unique
+  code                   String            @unique
   clientName             String
   clientContactNumber    String
   projectLocation        String
   startDate              DateTime
   expectedCompletionDate DateTime
-  estimatedBudget        Float
-  status                 ProjectStatus @default(PLANNING)
-  projectType            ProjectType   @default(CONSTRUCTION)
+  estimatedBudget        String // Encrypted float
+  status                 ProjectStatus     @default(PLANNING)
+  projectType            ProjectType       @default(CONSTRUCTION)
   description            String?
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
-  materials    Material[]
-  cashIns      CashIn[]
-  cashOuts     CashOut[]
-  labours      Labour[]
-  documents    Document[]
-  attendances  Attendance[]
-  projectVendors ProjectVendor[]
+  materials        Material[]
+  cashIns          CashIn[]
+  cashOuts         CashOut[]
+  labours          Labour[]
+  documents        Document[]
+  attendances      Attendance[]
+  projectVendors   ProjectVendor[]
   projectSuppliers ProjectSupplier[]
 
   @@index([name])
@@ -82,60 +82,60 @@ model Project {
 }
 
 model Supplier {
-  id             String     @id @default(uuid())
+  id             String            @id @default(uuid())
   name           String
   companyName    String?
   phoneNumber    String
   email          String?
   address        String?
-  openingBalance Float      @default(0.0)
-  currentDue     Float      @default(0.0)
+  openingBalance String            @default("0.0") // Encrypted float
+  currentDue     String            @default("0.0") // Encrypted float
   notes          String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  materials Material[]
-  cashOuts  CashOut[]
-  documents Document[]
+  materials          Material[]
+  cashOuts           CashOut[]
+  documents          Document[]
   projectAssignments ProjectSupplier[]
 
   @@index([name])
 }
 
 model Vendor {
-  id             String     @id @default(uuid())
+  id             String          @id @default(uuid())
   name           String
   companyName    String?
   contactNumber  String
   address        String?
   workType       String // e.g. Civil, Electrical, Plumbing
-  contractAmount Float      @default(0.0)
-  paidAmount     Float      @default(0.0)
-  dueAmount      Float      @default(0.0)
+  contractAmount String          @default("0.0") // Encrypted float
+  paidAmount     String          @default("0.0") // Encrypted float
+  dueAmount      String          @default("0.0") // Encrypted float
   notes          String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  cashOuts  CashOut[]
-  documents Document[]
+  cashOuts           CashOut[]
+  documents          Document[]
   projectAssignments ProjectVendor[]
 
   @@index([name])
 }
 
 model Employee {
-  id               String           @id @default(uuid())
-  employeeId       String           @unique // custom ID like EMP-001
+  id               String     @id @default(uuid())
+  employeeId       String     @unique // custom ID like EMP-001
   fullName         String
   designation      String
   department       String
   phoneNumber      String
   email            String?
   joiningDate      DateTime
-  monthlySalary    Float
-  employmentStatus String           @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  monthlySalary    String // Encrypted float
+  employmentStatus String     @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   salaries  Salary[]
   cashOuts  CashOut[]
@@ -145,16 +145,16 @@ model Employee {
 }
 
 model Labour {
-  id               String           @id @default(uuid())
+  id               String       @id @default(uuid())
   name             String
   phoneNumber      String
   trade            String // e.g. Mason, Electrician, Helper
-  dailyWage        Float
-  employmentStatus String           @default("ACTIVE") // ACTIVE, INACTIVE
+  dailyWage        String // Encrypted float
+  employmentStatus String       @default("ACTIVE") // ACTIVE, INACTIVE
   projectId        String
-  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   attendances Attendance[]
   cashOuts    CashOut[]
@@ -179,21 +179,21 @@ model Attendance {
 }
 
 model Material {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
   category      String // e.g. Cement, Steel, Sand, Bricks
   quantity      Float
   unit          String // e.g. Bags, Tons, CFT, Pcs
-  unitPrice     Float
-  totalPrice    Float
+  unitPrice     String // Encrypted float
+  totalPrice    String // Encrypted float
   supplierId    String
-  supplier      Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   projectId     String
-  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   purchaseDate  DateTime
   invoiceNumber String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   cashOuts CashOut[]
 
@@ -207,7 +207,7 @@ model CashIn {
   projectId       String?
   project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   clientName      String
-  amount          Float
+  amount          String // Encrypted float
   paymentMethod   String // e.g. CASH, BANK, CHEQUE, MOBILE_BANKING
   bankOrCash      String // Name of account or "Cash in Hand"
   referenceNumber String?
@@ -227,27 +227,27 @@ model CashOut {
   project         Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   expenseCategory String // e.g. MATERIALS, LABOR, EMPLOYEE_SALARY, CONTRACTOR_PAYMENT, OFFICE_RENT, UTILITIES, TRANSPORTATION, FUEL, EQUIPMENT_RENTAL, MISCELLANEOUS
   paidTo          String
-  amount          Float
+  amount          String // Encrypted float
   paymentMethod   String // e.g. CASH, BANK, CHEQUE, MOBILE_BANKING
   referenceNumber String?
   notes           String?
-  
-  // Relations to track specific disbursements
-  supplierId      String?
-  supplier        Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  vendorId        String?
-  vendor          Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  employeeId      String?
-  employee        Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  labourId        String?
-  labour          Labour?     @relation(fields: [labourId], references: [id], onDelete: SetNull)
-  materialId      String?
-  material        Material?   @relation(fields: [materialId], references: [id], onDelete: SetNull)
-  salaryId        String?
-  salary          Salary?     @relation(fields: [salaryId], references: [id], onDelete: SetNull)
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  // Relations to track specific disbursements
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  vendorId   String?
+  vendor     Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  labourId   String?
+  labour     Labour?   @relation(fields: [labourId], references: [id], onDelete: SetNull)
+  materialId String?
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  salaryId   String?
+  salary     Salary?   @relation(fields: [salaryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([paidTo])
   @@index([date])
@@ -258,12 +258,12 @@ model Salary {
   employeeId    String
   employee      Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   month         String // Format: YYYY-MM
-  basicSalary   Float
-  bonus         Float        @default(0.0)
-  deduction     Float        @default(0.0)
-  netSalary     Float
-  paidAmount    Float        @default(0.0)
-  dueAmount     Float        @default(0.0)
+  basicSalary   String // Encrypted float
+  bonus         String       @default("0.0") // Encrypted float
+  deduction     String       @default("0.0") // Encrypted float
+  netSalary     String // Encrypted float
+  paidAmount    String       @default("0.0") // Encrypted float
+  dueAmount     String       @default("0.0") // Encrypted float
   paymentStatus SalaryStatus @default(DUE)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -274,27 +274,27 @@ model Salary {
 }
 
 model Document {
-  id                String      @id @default(uuid())
-  name              String
-  url               String // URL or file path in supabase storage
-  uploadDate        DateTime    @default(now())
-  description       String?
-  fileType          String // PDF, IMAGE, EXCEL, WORD, etc.
-  category          String // CONTRACT, INVOICE, CHALLAN, QUOTATION, OTHER
-  
-  projectId         String?
-  project           Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  supplierId        String?
-  supplier          Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  vendorId          String?
-  vendor            Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  employeeId        String?
-  employee          Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  labourId          String?
-  labour            Labour?     @relation(fields: [labourId], references: [id], onDelete: SetNull)
+  id          String   @id @default(uuid())
+  name        String
+  url         String // URL or file path in supabase storage
+  uploadDate  DateTime @default(now())
+  description String?
+  fileType    String // PDF, IMAGE, EXCEL, WORD, etc.
+  category    String // CONTRACT, INVOICE, CHALLAN, QUOTATION, OTHER
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  vendorId   String?
+  vendor     Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  labourId   String?
+  labour     Labour?   @relation(fields: [labourId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([name])
 }
@@ -325,16 +325,15 @@ model ContactInquiry {
 }
 
 model ProjectVendor {
-  id             String   @id @default(uuid())
-  projectId      String
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  vendorId       String
-  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  
-  contractAmount Float    @default(0.0)
-  paidAmount     Float    @default(0.0)
-  dueAmount      Float    @default(0.0)
-  
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendorId  String
+  vendor    Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  contractAmount String   @default("0.0") // Encrypted float
+  paidAmount     String   @default("0.0") // Encrypted float
+  dueAmount      String   @default("0.0") // Encrypted float
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -342,16 +341,15 @@ model ProjectVendor {
 }
 
 model ProjectSupplier {
-  id             String   @id @default(uuid())
-  projectId      String
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supplierId     String
-  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  
-  contractAmount Float    @default(0.0)
-  paidAmount     Float    @default(0.0)
-  dueAmount      Float    @default(0.0)
-  
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  contractAmount String   @default("0.0") // Encrypted float
+  paidAmount     String   @default("0.0") // Encrypted float
+  dueAmount      String   @default("0.0") // Encrypted float
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

@@ -145,7 +145,7 @@ async function postHandler(request: Request) {
         date: new Date(date),
         projectId: projectId || null,
         clientName,
-        amount: txnAmount,
+        amount: txnAmount as any,
         paymentMethod,
         bankOrCash,
         referenceNumber,
@@ -174,7 +174,7 @@ async function postHandler(request: Request) {
         projectId: projectId || null,
         expenseCategory,
         paidTo,
-        amount: txnAmount,
+        amount: txnAmount as any,
         paymentMethod,
         referenceNumber,
         notes,
@@ -186,31 +186,52 @@ async function postHandler(request: Request) {
 
     // Update vendor balances if vendor payment
     if (vendorId) {
+      const vendor = await prisma.vendor.findUnique({
+        where: { id: vendorId },
+        select: { paidAmount: true, dueAmount: true },
+      });
+      const oldPaid = vendor ? Number(vendor.paidAmount) : 0.0;
+      const oldDue = vendor ? Number(vendor.dueAmount) : 0.0;
+
       await prisma.vendor.update({
         where: { id: vendorId },
         data: {
-          paidAmount: { increment: txnAmount },
-          dueAmount: { decrement: txnAmount },
+          paidAmount: String(oldPaid + txnAmount),
+          dueAmount: String(oldDue - txnAmount),
         },
       });
 
       if (projectId) {
-        await prisma.projectVendor.updateMany({
+        const projectVendors = await prisma.projectVendor.findMany({
           where: { vendorId, projectId },
-          data: {
-            paidAmount: { increment: txnAmount },
-            dueAmount: { decrement: txnAmount },
-          },
+          select: { id: true, paidAmount: true, dueAmount: true },
         });
+        for (const pv of projectVendors) {
+          const pvPaid = Number(pv.paidAmount);
+          const pvDue = Number(pv.dueAmount);
+          await prisma.projectVendor.update({
+            where: { id: pv.id },
+            data: {
+              paidAmount: String(pvPaid + txnAmount),
+              dueAmount: String(pvDue - txnAmount),
+            },
+          });
+        }
       }
     }
 
     // Update supplier balances if supplier payment
     if (supplierId) {
+      const supplier = await prisma.supplier.findUnique({
+        where: { id: supplierId },
+        select: { currentDue: true },
+      });
+      const oldDue = supplier ? Number(supplier.currentDue) : 0.0;
+
       await prisma.supplier.update({
         where: { id: supplierId },
         data: {
-          currentDue: { decrement: txnAmount },
+          currentDue: String(oldDue - txnAmount),
         },
       });
     }

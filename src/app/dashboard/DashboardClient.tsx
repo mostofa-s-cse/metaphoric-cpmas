@@ -345,7 +345,9 @@ export default function DashboardClient({
                   <YAxis stroke="#64748b" tickFormatter={(v) => `$${v / 1000}k`} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }}
+                    itemStyle={{ color: '#f8fafc' }}
                     formatter={(v: any) => formatCurrency(v)}
+                    cursor={{ fill: 'rgba(51, 65, 85, 0.15)' }}
                   />
                   <Legend />
                   <Bar dataKey="budget" name="Estimated Budget" fill="#1e293b" stroke="#3b82f6" strokeWidth={1} radius={[4, 4, 0, 0]} />

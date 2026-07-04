@@ -136,7 +136,12 @@ export function apiBadRequest(message: string, path: string) {
 
 /** 401 Unauthorized */
 export function apiUnauthorized(path: string) {
-  return apiError('Unauthorized — Please log in to continue.', path, 401);
+  const response = apiError('Unauthorized — Please log in to continue.', path, 401);
+  response.cookies.set('auth_token', '', {
+    path: '/',
+    maxAge: 0,
+  });
+  return response;
 }
 
 /** 403 Forbidden */

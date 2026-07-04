@@ -47,31 +47,30 @@ export default async function DashboardPage() {
     summary.totalLabour = await prisma.labour.count();
 
     // 3. Financial Totals
-    const cashInAgg = await prisma.cashIn.aggregate({ _sum: { amount: true } });
-    const cashOutAgg = await prisma.cashOut.aggregate({ _sum: { amount: true } });
-    summary.totalCashIn = cashInAgg._sum.amount || 0;
-    summary.totalCashOut = cashOutAgg._sum.amount || 0;
+    const cashIns = await prisma.cashIn.findMany({ select: { amount: true } });
+    const cashOuts = await prisma.cashOut.findMany();
+    summary.totalCashIn = cashIns.reduce((sum, ci) => sum + Number(ci.amount || 0), 0);
+    summary.totalCashOut = cashOuts.reduce((sum, co) => sum + Number(co.amount || 0), 0);
     summary.cashBalance = summary.totalCashIn - summary.totalCashOut;
     summary.netProfit = summary.cashBalance; // Using the formula: Net Profit = Total Cash In - Total Cash Out
 
     // 4. Due tracking
     const suppliers = await prisma.supplier.findMany();
-    summary.supplierDue = suppliers.reduce((sum, s) => sum + s.currentDue, 0);
+    summary.supplierDue = suppliers.reduce((sum, s) => sum + Number(s.currentDue || 0), 0);
 
     const vendors = await prisma.vendor.findMany();
-    summary.vendorDue = vendors.reduce((sum, v) => sum + v.dueAmount, 0);
+    summary.vendorDue = vendors.reduce((sum, v) => sum + Number(v.dueAmount || 0), 0);
 
     const salaries = await prisma.salary.findMany();
-    summary.salaryDue = salaries.reduce((sum, s) => sum + s.dueAmount, 0);
+    summary.salaryDue = salaries.reduce((sum, s) => sum + Number(s.dueAmount || 0), 0);
 
     // 5. Expense Breakdown by Category
-    const cashOuts = await prisma.cashOut.findMany();
     const categoriesMap: Record<string, number> = {};
     
     // Group cash outs by category
     cashOuts.forEach((co) => {
       const cat = co.expenseCategory || 'MISCELLANEOUS';
-      categoriesMap[cat] = (categoriesMap[cat] || 0) + co.amount;
+      categoriesMap[cat] = (categoriesMap[cat] || 0) + Number(co.amount || 0);
     });
 
     expenseBreakdown = Object.entries(categoriesMap).map(([category, value]) => ({
@@ -111,10 +110,10 @@ export default async function DashboardPage() {
       // Calculate total cashOut for this specific project
       const spent = cashOuts
         .filter((co) => co.projectId === p.id)
-        .reduce((sum, co) => sum + co.amount, 0);
+        .reduce((sum, co) => sum + Number(co.amount || 0), 0);
       return {
         name: p.name.length > 20 ? p.name.slice(0, 17) + '...' : p.name,
-        budget: p.estimatedBudget,
+        budget: Number(p.estimatedBudget || 0),
         spent: spent || 0,
       };
     });

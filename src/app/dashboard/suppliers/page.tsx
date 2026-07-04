@@ -12,6 +12,8 @@ import { Drawer } from '@/components/ui/Drawer';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -238,16 +240,12 @@ export default function SuppliersPage() {
       </div>
 
       {/* Filter */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-        <input
-          type="text"
-          placeholder="Search by company or supplier name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
-        />
-      </div>
+      <Input
+        placeholder="Search by company or supplier name..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        icon={<Search className="h-4 w-4" />}
+      />
 
       {/* Suppliers Table/Grid */}
       {isFetching ? (
@@ -518,102 +516,61 @@ export default function SuppliersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Supplier Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('name')}
                     placeholder="e.g. Apex Materials"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.name
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.name?.message}
                   />
-                  {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Company Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('companyName')}
                     placeholder="e.g. Apex Materials Group"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.companyName
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.companyName?.message}
                   />
-                  {errors.companyName && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.companyName.message}</p>
-                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Phone Number</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('phoneNumber')}
                     placeholder="e.g. +1 555-4567"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.phoneNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.phoneNumber?.message}
                   />
-                  {errors.phoneNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.phoneNumber.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Email Address</label>
-                  <input
+                  <Input
                     type="email"
                     {...register('email')}
                     placeholder="e.g. sales@apex.com"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.email
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.email?.message}
                   />
-                  {errors.email && <p className="text-rose-400 text-[10px] mt-1">{errors.email.message}</p>}
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-400 text-xs font-semibold mb-2">Address</label>
-                <input
-                  type="text"
+                <Input
                   {...register('address')}
                   placeholder="e.g. Industrial Zone Block C"
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    errors.address
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
+                  error={errors.address?.message}
                 />
-                {errors.address && <p className="text-rose-400 text-[10px] mt-1">{errors.address.message}</p>}
               </div>
 
               {modalMode === 'create' && (
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Opening Balance ($)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('openingBalance')}
                     placeholder="0.00"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.openingBalance
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.openingBalance?.message}
                   />
-                  {errors.openingBalance && (
-                    <p className="text-rose-400 text-[10px] mt-1">{errors.openingBalance.message}</p>
-                  )}
                 </div>
               )}
 
@@ -623,7 +580,7 @@ export default function SuppliersPage() {
                   rows={2}
                   {...register('notes')}
                   placeholder="e.g. Structural steel supply partner..."
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
+                  className={`w-full px-3 py-2 bg-slate-950/40 border border-slate-800 focus:border-cyan-500/80 focus:ring-cyan-500/30 rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all placeholder:text-slate-650 shadow-inner ${
                     errors.notes
                       ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
                       : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
@@ -653,40 +610,33 @@ export default function SuppliersPage() {
                 ) : (
                   <div className="space-y-3">
                     {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-end gap-3 bg-[#0f172a] p-3.5 border border-slate-300 rounded-xl">
+                      <div key={field.id} className="flex items-end gap-3 bg-[#0f172a] p-3.5 border border-slate-800/80 rounded-xl">
                         <div className="flex-1">
                           <label className="block text-slate-400 text-[11px] font-semibold mb-1.5">Project</label>
-                          <select
+                          <Select
                             {...register(`assignments.${index}.projectId`)}
-                            className="w-full px-3 py-2.5 bg-[#0a0f1c] border border-cyan-700/80 focus:border-cyan-400 rounded-lg text-slate-200 text-[12px] focus:outline-none transition-colors"
+                            error={errors.assignments?.[index]?.projectId?.message}
                           >
-                            <option value="">Select Project...</option>
+                            <option value="" className="bg-slate-900 text-slate-250">Select Project...</option>
                             {projects.map((p: any) => (
-                              <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">{p.name} ({p.code})</option>
                             ))}
-                          </select>
-                          {errors.assignments?.[index]?.projectId && (
-                            <p className="text-rose-400 text-[10px] mt-1">{errors.assignments[index].projectId.message}</p>
-                          )}
+                          </Select>
                         </div>
 
                         <div className="w-28">
                           <label className="block text-slate-400 text-[11px] font-semibold mb-1.5">Contract ($)</label>
-                          <input
-                            type="text"
+                          <Input
                             placeholder="0.00"
                             {...register(`assignments.${index}.contractAmount`)}
-                            className="w-full px-3 py-2.5 bg-[#0a0f1c] border border-slate-800 focus:border-cyan-400 rounded-lg text-slate-200 text-[12px] focus:outline-none transition-colors"
                           />
                         </div>
 
                         <div className="w-28">
                           <label className="block text-slate-400 text-[11px] font-semibold mb-1.5">Paid ($)</label>
-                          <input
-                            type="text"
+                          <Input
                             placeholder="0"
                             {...register(`assignments.${index}.paidAmount`)}
-                            className="w-full px-3 py-2.5 bg-[#0a0f1c] border border-slate-800 focus:border-cyan-400 rounded-lg text-slate-200 text-[12px] focus:outline-none transition-colors"
                           />
                         </div>
 

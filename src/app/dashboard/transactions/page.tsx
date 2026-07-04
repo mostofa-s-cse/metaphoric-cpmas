@@ -11,6 +11,8 @@ import { Modal } from '@/components/ui/Modal';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -287,20 +289,16 @@ export default function TransactionsPage() {
       </div>
 
       {/* Filters */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-        <input
-          type="text"
-          placeholder={
-            activeTab === 'cashin'
-              ? 'Search client collections by name or source...'
-              : 'Search expenses by category or beneficiary...'
-          }
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
-        />
-      </div>
+      <Input
+        placeholder={
+          activeTab === 'cashin'
+            ? 'Search client collections by name or source...'
+            : 'Search expenses by category or beneficiary...'
+        }
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        icon={<Search className="h-4 w-4" />}
+      />
 
       {/* Ledger Table */}
       {isFetching ? (
@@ -457,73 +455,57 @@ export default function TransactionsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Paid By (Client)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerCashIn('clientName')}
                     placeholder="e.g. Skyline Developers"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashInErrors.clientName
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={cashInErrors.clientName?.message}
                   />
-                  {cashInErrors.clientName && (
-                    <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.clientName.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Amount Collected ($)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerCashIn('amount')}
                     placeholder="0.00"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashInErrors.amount
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={cashInErrors.amount?.message}
                   />
-                  {cashInErrors.amount && (
-                    <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.amount.message}</p>
-                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Receipt Category</label>
-                  <select
+                  <Select
                     {...registerCashIn('source')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={cashInErrors.source?.message}
                   >
-                    <option value="" disabled>Select Category...</option>
-                    <option value="SIGNING_AGREEMENT">Signing Agreement</option>
-                    <option value="MATERIAL_PREPS">Material preps</option>
-                    <option value="LABER_PREPS">Laber preps</option>
-                    <option value="RUNNING_BILL">Running Bill</option>
-                    <option value="FINAL_BILL">Final Bill</option>
-                    <option value="CLIENT_PAYMENT">Client Progress Invoice</option>
-                    <option value="ADVANCE_PAYMENT">Project Mobilization Advance</option>
-                    <option value="INSTALLMENT">Periodic Installment</option>
-                    <option value="OTHER_INCOME">Other Miscellaneous Income</option>
-                  </select>
+                    <option value="" disabled className="bg-slate-900 text-slate-250">Select Category...</option>
+                    <option value="SIGNING_AGREEMENT" className="bg-slate-900 text-slate-200">Signing Agreement</option>
+                    <option value="MATERIAL_PREPS" className="bg-slate-900 text-slate-200">Material preps</option>
+                    <option value="LABER_PREPS" className="bg-slate-900 text-slate-200">Laber preps</option>
+                    <option value="RUNNING_BILL" className="bg-slate-900 text-slate-200">Running Bill</option>
+                    <option value="FINAL_BILL" className="bg-slate-900 text-slate-200">Final Bill</option>
+                    <option value="CLIENT_PAYMENT" className="bg-slate-900 text-slate-200">Client Progress Invoice</option>
+                    <option value="ADVANCE_PAYMENT" className="bg-slate-900 text-slate-200">Project Mobilization Advance</option>
+                    <option value="INSTALLMENT" className="bg-slate-900 text-slate-200">Periodic Installment</option>
+                    <option value="OTHER_INCOME" className="bg-slate-900 text-slate-200">Other Miscellaneous Income</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
-                  <select
+                  <Select
                     {...registerCashIn('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={cashInErrors.projectId?.message}
                   >
-                    <option value="" disabled>Select Project...</option>
-                    <option value="GENERAL">General Corporate Income (No Project)</option>
+                    <option value="" disabled className="bg-slate-900 text-slate-250">Select Project...</option>
+                    <option value="GENERAL" className="bg-slate-900 text-slate-200">General Corporate Income (No Project)</option>
                     {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
                         {p.code} - {p.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -547,32 +529,24 @@ export default function TransactionsPage() {
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Payment Method</label>
-                  <select
+                  <Select
                     {...registerCashIn('paymentMethod')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={cashInErrors.paymentMethod?.message}
                   >
-                    <option value="" disabled>Select Method...</option>
-                    <option value="BANK">Bank Transfer</option>
-                    <option value="CASH">Cash</option>
-                    <option value="CHEQUE">Cheque</option>
-                  </select>
+                    <option value="" disabled className="bg-slate-900 text-slate-250">Select Method...</option>
+                    <option value="BANK" className="bg-slate-900 text-slate-200">Bank Transfer</option>
+                    <option value="CASH" className="bg-slate-900 text-slate-200">Cash</option>
+                    <option value="CHEQUE" className="bg-slate-900 text-slate-200">Cheque</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Ref / Instrument #</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerCashIn('referenceNumber')}
                     placeholder="e.g. wire #09283"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashInErrors.referenceNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={cashInErrors.referenceNumber?.message}
                   />
-                  {cashInErrors.referenceNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.referenceNumber.message}</p>
-                  )}
                 </div>
               </div>
 
@@ -580,19 +554,11 @@ export default function TransactionsPage() {
                 <label className="block text-slate-400 text-xs font-semibold mb-2">
                   Deposit To (Bank / Cash)
                 </label>
-                <input
-                  type="text"
+                <Input
                   {...registerCashIn('bankOrCash')}
                   placeholder="e.g. City Bank A/C: 1234, DBBL Mobile, or Office Safe Cash"
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    cashInErrors.bankOrCash
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
+                  error={cashInErrors.bankOrCash?.message}
                 />
-                {cashInErrors.bankOrCash && (
-                  <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.bankOrCash.message}</p>
-                )}
               </div>
 
               <div>
@@ -601,11 +567,7 @@ export default function TransactionsPage() {
                   rows={2}
                   {...registerCashIn('notes')}
                   placeholder="e.g. Mobilization installment 2..."
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    cashInErrors.notes
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
+                  className="w-full px-3 py-2 bg-slate-950/40 border border-slate-800 focus:border-cyan-500/80 focus:ring-cyan-500/30 rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all placeholder:text-slate-650 shadow-inner"
                 />
                 {cashInErrors.notes && <p className="text-rose-400 text-[10px] mt-1">{cashInErrors.notes.message}</p>}
               </div>
@@ -644,78 +606,62 @@ export default function TransactionsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Paid To (Vendor/Labour)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerCashOut('paidTo')}
                     placeholder="e.g. Mason team lead"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashOutErrors.paidTo
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={cashOutErrors.paidTo?.message}
                   />
-                  {cashOutErrors.paidTo && (
-                    <p className="text-rose-400 text-[10px] mt-1">{cashOutErrors.paidTo.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Disbursed Amount ($)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerCashOut('amount')}
                     placeholder="0.00"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashOutErrors.amount
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={cashOutErrors.amount?.message}
                   />
-                  {cashOutErrors.amount && (
-                    <p className="text-rose-400 text-[10px] mt-1">{cashOutErrors.amount.message}</p>
-                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Expense Category</label>
-                  <select
+                  <Select
                     {...registerCashOut('expenseCategory')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={cashOutErrors.expenseCategory?.message}
                   >
-                    <option value="" disabled>Select Category...</option>
-                    <option value="SIGNING_AGREEMENT">Signing Agreement</option>
-                    <option value="MATERIAL_PREPS">Material preps</option>
-                    <option value="LABER_PREPS">Laber preps</option>
-                    <option value="RUNNING_BILL">Running Bill</option>
-                    <option value="FINAL_BILL">Final Bill</option>
-                    <option value="MATERIALS">Raw Materials Purchase</option>
-                    <option value="LABOR">Site Labor Daily Wages</option>
-                    <option value="VENDOR_PAYMENT">Vendor Payment Milestone</option>
-                    <option value="OFFICE_RENT">Office Rent</option>
-                    <option value="UTILITIES">Electricity &amp; Internet Utilities</option>
-                    <option value="TRANSPORTATION">Transportation</option>
-                    <option value="FUEL">Fuel</option>
-                    <option value="EQUIPMENT_RENTAL">Heavy Crane/Equipment Rental</option>
-                    <option value="MISCELLANEOUS">Miscellaneous / Petty Cash</option>
-                  </select>
+                    <option value="" disabled className="bg-slate-900 text-slate-250">Select Category...</option>
+                    <option value="SIGNING_AGREEMENT" className="bg-slate-900 text-slate-200">Signing Agreement</option>
+                    <option value="MATERIAL_PREPS" className="bg-slate-900 text-slate-200">Material preps</option>
+                    <option value="LABER_PREPS" className="bg-slate-900 text-slate-200">Laber preps</option>
+                    <option value="RUNNING_BILL" className="bg-slate-900 text-slate-200">Running Bill</option>
+                    <option value="FINAL_BILL" className="bg-slate-900 text-slate-200">Final Bill</option>
+                    <option value="MATERIALS" className="bg-slate-900 text-slate-200">Raw Materials Purchase</option>
+                    <option value="LABOR" className="bg-slate-900 text-slate-200">Site Labor Daily Wages</option>
+                    <option value="VENDOR_PAYMENT" className="bg-slate-900 text-slate-200">Vendor Payment Milestone</option>
+                    <option value="OFFICE_RENT" className="bg-slate-900 text-slate-200">Office Rent</option>
+                    <option value="UTILITIES" className="bg-slate-900 text-slate-200">Electricity &amp; Internet Utilities</option>
+                    <option value="TRANSPORTATION" className="bg-slate-900 text-slate-200">Transportation</option>
+                    <option value="FUEL" className="bg-slate-900 text-slate-200">Fuel</option>
+                    <option value="EQUIPMENT_RENTAL" className="bg-slate-900 text-slate-200">Heavy Crane/Equipment Rental</option>
+                    <option value="MISCELLANEOUS" className="bg-slate-900 text-slate-200">Miscellaneous / Petty Cash</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Project</label>
-                  <select
+                  <Select
                     {...registerCashOut('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={cashOutErrors.projectId?.message}
                   >
-                    <option value="" disabled>Select Project...</option>
-                    <option value="GENERAL">Corporate Overhead (General Corporate)</option>
+                    <option value="" disabled className="bg-slate-900 text-slate-250">Select Project...</option>
+                    <option value="GENERAL" className="bg-slate-900 text-slate-200">Corporate Overhead (General Corporate)</option>
                     {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
                         {p.code} - {p.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -741,32 +687,24 @@ export default function TransactionsPage() {
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Payment Method</label>
-                  <select
+                  <Select
                     {...registerCashOut('paymentMethod')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={cashOutErrors.paymentMethod?.message}
                   >
-                    <option value="" disabled>Select Method...</option>
-                    <option value="CASH">Cash in Hand</option>
-                    <option value="BANK">Bank Transfer</option>
-                    <option value="CHEQUE">Cheque</option>
-                  </select>
+                    <option value="" disabled className="bg-slate-900 text-slate-250">Select Method...</option>
+                    <option value="CASH" className="bg-slate-900 text-slate-200">Cash in Hand</option>
+                    <option value="BANK" className="bg-slate-900 text-slate-200">Bank Transfer</option>
+                    <option value="CHEQUE" className="bg-slate-900 text-slate-200">Cheque</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Ref / Cheque #</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerCashOut('referenceNumber')}
                     placeholder="e.g. chq #9012"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      cashOutErrors.referenceNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={cashOutErrors.referenceNumber?.message}
                   />
-                  {cashOutErrors.referenceNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{cashOutErrors.referenceNumber.message}</p>
-                  )}
                 </div>
               </div>
 
@@ -776,11 +714,7 @@ export default function TransactionsPage() {
                   rows={2}
                   {...registerCashOut('notes')}
                   placeholder="Additional transaction info..."
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    cashOutErrors.notes
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
+                  className="w-full px-3 py-2 bg-slate-950/40 border border-slate-800 focus:border-cyan-500/80 focus:ring-cyan-500/30 rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all placeholder:text-slate-650 shadow-inner"
                 />
                 {cashOutErrors.notes && (
                   <p className="text-rose-400 text-[10px] mt-1">{cashOutErrors.notes.message}</p>

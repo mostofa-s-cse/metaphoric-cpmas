@@ -8,6 +8,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useDispatch } from 'react-redux';
 import { addToast } from '@/store/slices/uiSlice';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -256,14 +258,12 @@ export default function UsersPage() {
 
       {/* Search & Filters */}
       <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input
-            type="text"
+        <div className="flex-1">
+          <Input
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+            icon={<Search className="h-4 w-4" />}
           />
         </div>
         <button
@@ -408,15 +408,11 @@ export default function UsersPage() {
               {/* Full Name */}
               <div>
                 <label className="block text-slate-400 text-xs font-semibold mb-2">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sarah Jenkins"
+                <Input
                   {...activeForm.register('fullName')}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-xs"
+                  placeholder="e.g. Sarah Jenkins"
+                  error={activeForm.formState.errors.fullName?.message}
                 />
-                {activeForm.formState.errors.fullName && (
-                  <p className="text-rose-400 text-[11px] mt-1">{activeForm.formState.errors.fullName.message}</p>
-                )}
               </div>
 
               {/* Email */}
@@ -425,15 +421,12 @@ export default function UsersPage() {
                   <Mail className="h-3.5 w-3.5 inline mr-1.5 text-slate-500" />
                   Email Address
                 </label>
-                <input
+                <Input
                   type="email"
-                  placeholder="e.g. sarah@company.com"
                   {...activeForm.register('email')}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-xs"
+                  placeholder="e.g. sarah@company.com"
+                  error={activeForm.formState.errors.email?.message}
                 />
-                {activeForm.formState.errors.email && (
-                  <p className="text-rose-400 text-[11px] mt-1">{activeForm.formState.errors.email.message}</p>
-                )}
               </div>
 
               {/* Password */}
@@ -442,15 +435,12 @@ export default function UsersPage() {
                   <Key className="h-3.5 w-3.5 inline mr-1.5 text-slate-500" />
                   {modalMode === 'create' ? 'Password' : 'New Password (leave blank to keep current)'}
                 </label>
-                <input
+                <Input
                   type="password"
-                  placeholder={modalMode === 'create' ? 'Min. 6 characters' : 'Leave blank to keep current'}
                   {...activeForm.register('password')}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-xs"
+                  placeholder={modalMode === 'create' ? 'Min. 6 characters' : 'Leave blank to keep current'}
+                  error={activeForm.formState.errors.password?.message}
                 />
-                {activeForm.formState.errors.password && (
-                  <p className="text-rose-400 text-[11px] mt-1">{activeForm.formState.errors.password.message}</p>
-                )}
               </div>
 
               {/* Role */}
@@ -459,18 +449,18 @@ export default function UsersPage() {
                   <Shield className="h-3.5 w-3.5 inline mr-1.5 text-slate-500" />
                   System Role
                 </label>
-                <select
+                <Select
                   {...activeForm.register('role')}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-xs"
+                  error={activeForm.formState.errors.role?.message}
                 >
                   {currentUser?.role === 'SUPER_ADMIN' && (
-                    <option value="SUPER_ADMIN">Super Admin — Full Access</option>
+                    <option value="SUPER_ADMIN" className="bg-slate-900 text-slate-200">Super Admin — Full Access</option>
                   )}
-                  <option value="ADMIN">Admin — Project & Financial Management</option>
-                  <option value="ACCOUNTANT">Accountant — Financial Records</option>
-                  <option value="PROJECT_MANAGER">Project Manager — Construction Ops</option>
-                  <option value="DATA_ENTRY_OPERATOR">Data Entry Operator — Basic Access</option>
-                </select>
+                  <option value="ADMIN" className="bg-slate-900 text-slate-200">Admin — Project & Financial Management</option>
+                  <option value="ACCOUNTANT" className="bg-slate-900 text-slate-200">Accountant — Financial Records</option>
+                  <option value="PROJECT_MANAGER" className="bg-slate-900 text-slate-200">Project Manager — Construction Ops</option>
+                  <option value="DATA_ENTRY_OPERATOR" className="bg-slate-900 text-slate-200">Data Entry Operator — Basic Access</option>
+                </Select>
                 {(() => {
                   const role = (modalMode === 'create' ? createForm.watch('role') : editForm.watch('role')) as keyof typeof ROLE_CONFIG;
                   return role && ROLE_CONFIG[role] ? (

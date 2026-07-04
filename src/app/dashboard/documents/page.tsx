@@ -9,6 +9,8 @@ import { useForm } from 'react-hook-form';
 import { Pagination } from '@/components/ui/Pagination';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -135,7 +137,7 @@ export default function DocumentsPage() {
 
       const payload = {
         ...values,
-        url: uploadData.url,
+        url: uploadData.data?.url || uploadData.url,
         fileType: selectedFile.name.split('.').pop()?.toUpperCase() || values.fileType,
         projectId: values.projectId || null,
         supplierId: values.supplierId || null,
@@ -231,41 +233,41 @@ export default function DocumentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input
-            type="text"
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
             placeholder="Search documents by name or description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
+            icon={<Search className="h-4 w-4" />}
+            className="flex-1"
           />
+
+          <Select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="sm:w-[260px]"
+          >
+            <option value="ALL" className="bg-slate-900 text-slate-200">All Projects</option>
+            <option value="GENERAL" className="bg-slate-900 text-slate-200">General Corporate (No Project)</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                {p.code} - {p.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
-        <select
-          value={projectFilter}
-          onChange={(e) => setProjectFilter(e.target.value)}
-          className="px-3.5 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-450 focus:outline-none text-xs transition-all cursor-pointer md:w-[220px]"
-        >
-          <option value="ALL">All Projects</option>
-          <option value="GENERAL">General Corporate (No Project)</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.code} - {p.name}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex flex-wrap gap-2">
+        {/* Category Tabs */}
+        <div className="flex border-b border-slate-800/60 overflow-x-auto scrollbar-none">
           {['ALL', 'CONTRACT', 'INVOICE', 'CHALLAN', 'QUOTATION', 'OTHER'].map((cat) => (
             <button
               key={cat}
               onClick={() => setCategoryFilter(cat)}
-              className={`px-3.5 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-5 py-3 border-b-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap cursor-pointer ${
                 categoryFilter === cat
-                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  ? 'border-cyan-400 text-cyan-400 bg-cyan-500/5'
+                  : 'border-transparent text-slate-500 hover:text-slate-350 hover:bg-slate-900/20'
               }`}
             >
               {cat.toLowerCase()}
@@ -357,7 +359,7 @@ export default function DocumentsPage() {
                       <span>View File</span>
                     </button>
                     <a
-                      href={doc.url.replace(/^\/public\//, '/')}
+                      href={doc.url.replace(/^\/?public\//, '/')}
                       download={doc.name}
                       className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                     >
@@ -412,91 +414,80 @@ export default function DocumentsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Document Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...register('name')}
                     placeholder="e.g. Skyline Piling Contract"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      errors.name
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={errors.name?.message}
                   />
-                  {errors.name && <p className="text-rose-400 text-[10px] mt-1">{errors.name.message}</p>}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">File Type</label>
-                  <select
+                  <Select
                     {...register('fileType')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="PDF">PDF</option>
-                    <option value="IMAGE">IMAGE</option>
-                  </select>
+                    <option value="PDF" className="bg-slate-900 text-slate-200">PDF</option>
+                    <option value="IMAGE" className="bg-slate-900 text-slate-200">IMAGE</option>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Document Category</label>
-                  <select
+                  <Select
                     {...register('category')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="CONTRACT">Contract / Deed</option>
-                    <option value="INVOICE">Expense Invoice / Bill</option>
-                    <option value="CHALLAN">Material Challan / Delivery</option>
-                    <option value="QUOTATION">Supplier Quotation</option>
-                    <option value="OTHER">Other Misc</option>
-                  </select>
+                    <option value="CONTRACT" className="bg-slate-900 text-slate-200">Contract / Deed</option>
+                    <option value="INVOICE" className="bg-slate-900 text-slate-200">Expense Invoice / Bill</option>
+                    <option value="CHALLAN" className="bg-slate-900 text-slate-200">Material Challan / Delivery</option>
+                    <option value="QUOTATION" className="bg-slate-900 text-slate-200">Supplier Quotation</option>
+                    <option value="OTHER" className="bg-slate-900 text-slate-200">Other Misc</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Project</label>
-                  <select
+                  <Select
                     {...register('projectId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="">General Corporate (No Project)</option>
+                    <option value="" className="bg-slate-900 text-slate-250">General Corporate (No Project)</option>
                     {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
                         {p.code} - {p.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Supplier</label>
-                  <select
+                  <Select
                     {...register('supplierId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="">No Supplier Link</option>
+                    <option value="" className="bg-slate-900 text-slate-250">No Supplier Link</option>
                     {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
+                      <option key={s.id} value={s.id} className="bg-slate-900 text-slate-200">
                         {s.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Link to Vendor</label>
-                  <select
+                  <Select
                     {...register('vendorId')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
                   >
-                    <option value="">No Vendor Link</option>
+                    <option value="" className="bg-slate-900 text-slate-250">No Vendor Link</option>
                     {vendors.map((v) => (
-                      <option key={v.id} value={v.id}>
+                      <option key={v.id} value={v.id} className="bg-slate-900 text-slate-200">
                         {v.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -520,11 +511,7 @@ export default function DocumentsPage() {
                   rows={2}
                   {...register('description')}
                   placeholder="e.g. Skyline Heights foundation piling execution contract..."
-                  className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                    errors.description
-                      ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                      : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                  }`}
+                  className="w-full px-3 py-2 bg-slate-950/40 border border-slate-800 focus:border-cyan-500/80 focus:ring-cyan-500/30 rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all placeholder:text-slate-650 shadow-inner"
                 />
                 {errors.description && <p className="text-rose-400 text-[10px] mt-1">{errors.description.message}</p>}
               </div>
@@ -560,7 +547,7 @@ export default function DocumentsPage() {
               </h2>
               <div className="flex items-center gap-3">
                 <a
-                  href={viewDoc.url.replace(/^\/public\//, '/')}
+                  href={viewDoc.url.replace(/^\/?public\//, '/')}
                   download={viewDoc.name}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700/80 rounded-lg text-slate-350 hover:text-slate-100 text-xs font-semibold transition-all cursor-pointer"
                 >
@@ -576,28 +563,30 @@ export default function DocumentsPage() {
               </div>
             </div>
             
-            <div className="flex-1 overflow-auto bg-slate-950/50 p-4 flex items-center justify-center">
+            <div className="flex-1 overflow-hidden bg-slate-950/50 p-4 flex flex-col">
               {viewDoc.fileType?.toUpperCase() === 'PDF' ? (
                 <iframe
-                  src={viewDoc.url.replace(/^\/public\//, '/')}
-                  className="w-full h-full rounded-xl border border-slate-800"
+                  src={viewDoc.url.replace(/^\/?public\//, '/')}
+                  className="w-full flex-1 rounded-xl border border-slate-800 bg-slate-950"
                   title={viewDoc.name}
                 />
               ) : ['IMAGE', 'PNG', 'JPG', 'JPEG', 'GIF', 'WEBP'].includes(viewDoc.fileType?.toUpperCase()) ? (
-                <img
-                  src={viewDoc.url.replace(/^\/public\//, '/')}
-                  alt={viewDoc.name}
-                  className="max-w-full max-h-full object-contain rounded-xl"
-                />
+                <div className="flex-1 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={viewDoc.url.replace(/^\/?public\//, '/')}
+                    alt={viewDoc.name}
+                    className="max-w-full max-h-full object-contain rounded-xl"
+                  />
+                </div>
               ) : (
-                <div className="text-center">
-                  <FileText className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">Preview not available for this file type.</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                  <FileText className="h-12 w-12 text-slate-650 mb-3" />
+                  <p className="text-slate-400 text-sm font-semibold">Preview not available for this file type.</p>
                   <a
-                    href={viewDoc.url.replace(/^\/public\//, '/')}
+                    href={viewDoc.url.replace(/^\/?public\//, '/')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-block px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold rounded-lg transition-colors"
+                    className="mt-4 inline-block px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold rounded-lg transition-colors cursor-pointer"
                   >
                     Download File
                   </a>

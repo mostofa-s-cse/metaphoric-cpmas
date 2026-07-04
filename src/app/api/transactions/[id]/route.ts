@@ -71,31 +71,54 @@ async function deleteHandler(
 
     // Revert vendor balances if it was a vendor payment
     if (cashOut.vendorId) {
+      const vendor = await prisma.vendor.findUnique({
+        where: { id: cashOut.vendorId },
+        select: { paidAmount: true, dueAmount: true },
+      });
+      const oldPaid = vendor ? Number(vendor.paidAmount) : 0.0;
+      const oldDue = vendor ? Number(vendor.dueAmount) : 0.0;
+      const txnAmt = Number(cashOut.amount);
+
       await prisma.vendor.update({
         where: { id: cashOut.vendorId },
         data: {
-          paidAmount: { decrement: cashOut.amount },
-          dueAmount: { increment: cashOut.amount },
+          paidAmount: String(oldPaid - txnAmt),
+          dueAmount: String(oldDue + txnAmt),
         },
       });
 
       if (cashOut.projectId) {
-        await prisma.projectVendor.updateMany({
+        const projectVendors = await prisma.projectVendor.findMany({
           where: { vendorId: cashOut.vendorId, projectId: cashOut.projectId },
-          data: {
-            paidAmount: { decrement: cashOut.amount },
-            dueAmount: { increment: cashOut.amount },
-          },
+          select: { id: true, paidAmount: true, dueAmount: true },
         });
+        for (const pv of projectVendors) {
+          const pvPaid = Number(pv.paidAmount);
+          const pvDue = Number(pv.dueAmount);
+          await prisma.projectVendor.update({
+            where: { id: pv.id },
+            data: {
+              paidAmount: String(pvPaid - txnAmt),
+              dueAmount: String(pvDue + txnAmt),
+            },
+          });
+        }
       }
     }
 
     // Revert supplier balances if it was a supplier payment
     if (cashOut.supplierId) {
+      const supplier = await prisma.supplier.findUnique({
+        where: { id: cashOut.supplierId },
+        select: { currentDue: true },
+      });
+      const oldDue = supplier ? Number(supplier.currentDue) : 0.0;
+      const txnAmt = Number(cashOut.amount);
+
       await prisma.supplier.update({
         where: { id: cashOut.supplierId },
         data: {
-          currentDue: { increment: cashOut.amount },
+          currentDue: String(oldDue + txnAmt),
         },
       });
     }

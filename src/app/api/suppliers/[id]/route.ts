@@ -63,9 +63,9 @@ async function putHandler(
           return {
             supplierId: id,
             projectId: a.projectId,
-            contractAmount: actAmt,
-            paidAmount: pdAmt,
-            dueAmount: actAmt - pdAmt,
+            contractAmount: actAmt as any,
+            paidAmount: pdAmt as any,
+            dueAmount: (actAmt - pdAmt) as any,
           };
         }),
       });

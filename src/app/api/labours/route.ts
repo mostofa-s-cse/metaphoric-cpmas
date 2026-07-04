@@ -90,7 +90,7 @@ async function postHandler(request: Request) {
       name,
       phoneNumber,
       trade,
-      dailyWage: parseFloat(dailyWage),
+      dailyWage: parseFloat(dailyWage) as any,
       projectId,
       employmentStatus: employmentStatus || 'ACTIVE',
     },

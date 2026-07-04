@@ -42,9 +42,9 @@ async function putHandler(
         return {
           vendorId: id,
           projectId: a.projectId,
-          contractAmount: actAmt,
-          paidAmount: pdAmt,
-          dueAmount: actAmt - pdAmt,
+          contractAmount: actAmt as any,
+          paidAmount: pdAmt as any,
+          dueAmount: (actAmt - pdAmt) as any,
         };
       }),
     });
@@ -57,8 +57,8 @@ async function putHandler(
     cAmt = assignments.reduce((sum, a) => sum + parseFloat(a.contractAmount || '0'), 0.0);
     pAmt = assignments.reduce((sum, a) => sum + parseFloat(a.paidAmount || '0'), 0.0);
   } else {
-    cAmt = contractAmount !== undefined ? parseFloat(contractAmount) : vendor.contractAmount;
-    pAmt = paidAmount !== undefined ? parseFloat(paidAmount) : vendor.paidAmount;
+    cAmt = contractAmount !== undefined ? parseFloat(contractAmount) : Number(vendor.contractAmount);
+    pAmt = paidAmount !== undefined ? parseFloat(paidAmount) : Number(vendor.paidAmount);
   }
   const dAmt = cAmt - pAmt;
 
@@ -70,9 +70,9 @@ async function putHandler(
       contactNumber: contactNumber || undefined,
       address: address !== undefined ? address : undefined,
       workType: workType || undefined,
-      contractAmount: cAmt,
-      paidAmount: pAmt,
-      dueAmount: dAmt,
+      contractAmount: cAmt as any,
+      paidAmount: pAmt as any,
+      dueAmount: dAmt as any,
       notes: notes !== undefined ? notes : undefined,
     },
   });

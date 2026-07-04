@@ -1,12 +1,6 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
+import { prisma } from '../src/lib/db';
 import bcrypt from 'bcryptjs';
-
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Seeding database...');
@@ -39,7 +33,7 @@ async function main() {
     }
   }
 
-  // 2. Create Initial Projects
+  // 2. Create Initial Projects (budgets passed as String)
   const projectData = [
     {
       name: 'Skyline Heights Commercial Center',
@@ -49,7 +43,7 @@ async function main() {
       projectLocation: '742 Evergreen Terrace, Downtown',
       startDate: new Date('2026-01-01'),
       expectedCompletionDate: new Date('2027-06-30'),
-      estimatedBudget: 5000000.0,
+      estimatedBudget: '5000000.0',
       status: 'RUNNING' as const,
       projectType: 'CONSTRUCTION' as const,
       description: 'A 15-story premium commercial building with mixed retail and office spaces.',
@@ -62,7 +56,7 @@ async function main() {
       projectLocation: '12 River Road, Suburbs',
       startDate: new Date('2026-03-15'),
       expectedCompletionDate: new Date('2027-12-31'),
-      estimatedBudget: 3200000.0,
+      estimatedBudget: '3200000.0',
       status: 'PLANNING' as const,
       projectType: 'SUPERVISION' as const,
       description: 'A gated community containing 45 eco-friendly residential villas.',
@@ -75,7 +69,7 @@ async function main() {
       projectLocation: 'Express Highway Intersect 4',
       startDate: new Date('2025-05-10'),
       expectedCompletionDate: new Date('2026-05-10'),
-      estimatedBudget: 12000000.0,
+      estimatedBudget: '12000000.0',
       status: 'COMPLETED' as const,
       projectType: 'CONSTRUCTION' as const,
       description: 'Public infrastructure bridge project spanning 1.2 kilometers.',
@@ -90,7 +84,7 @@ async function main() {
     }
   }
 
-  // 3. Create Sample Suppliers
+  // 3. Create Sample Suppliers (balances passed as String)
   const supplierData = [
     {
       name: 'Apex Steel & Cement',
@@ -98,8 +92,8 @@ async function main() {
       phoneNumber: '+1 (555) 123-4567',
       email: 'sales@apexmaterials.com',
       address: 'Industrial Zone Block C, Cityville',
-      openingBalance: 10000.0,
-      currentDue: 15000.0,
+      openingBalance: '10000.0',
+      currentDue: '15000.0',
       notes: 'Key supplier for structural steel and Portland cement.',
     },
     {
@@ -108,8 +102,8 @@ async function main() {
       phoneNumber: '+1 (555) 987-6543',
       email: 'info@nationaltimber.com',
       address: '44 Logging Way, Forest Town',
-      openingBalance: 0.0,
-      currentDue: 5400.0,
+      openingBalance: '0.0',
+      currentDue: '5400.0',
       notes: 'Supplier for structural wood framing and scaffolding planks.',
     },
   ];
@@ -122,7 +116,7 @@ async function main() {
     }
   }
 
-  // 4. Create Sample Vendors
+  // 4. Create Sample Vendors (amounts passed as String)
   const vendorData = [
     {
       name: 'John Doe Civil works',
@@ -130,9 +124,9 @@ async function main() {
       contactNumber: '+1 (555) 444-1122',
       address: '22 Trench Rd, Metroville',
       workType: 'Civil & Foundation',
-      contractAmount: 450000.0,
-      paidAmount: 300000.0,
-      dueAmount: 150000.0,
+      contractAmount: '450000.0',
+      paidAmount: '300000.0',
+      dueAmount: '150000.0',
       notes: 'Subcontractor handling foundation piling and deep excavating.',
     },
     {
@@ -141,9 +135,9 @@ async function main() {
       contactNumber: '+1 (555) 777-8899',
       address: '88 Voltage Blvd, Cityville',
       workType: 'Electrical & Wiring',
-      contractAmount: 180000.0,
-      paidAmount: 80000.0,
-      dueAmount: 100000.0,
+      contractAmount: '180000.0',
+      paidAmount: '80000.0',
+      dueAmount: '100000.0',
       notes: 'Responsible for main electrical risers and distribution panels.',
     },
   ];
@@ -156,7 +150,7 @@ async function main() {
     }
   }
 
-  // 5. Create Sample Employees
+  // 5. Create Sample Employees (salaries passed as String)
   const employeeData = [
     {
       employeeId: 'EMP-001',
@@ -166,7 +160,7 @@ async function main() {
       phoneNumber: '+1 (555) 606-7070',
       email: 'sjenkins@cpmas.com',
       joiningDate: new Date('2024-03-01'),
-      monthlySalary: 6500.0,
+      monthlySalary: '6500.0',
       employmentStatus: 'ACTIVE',
     },
     {
@@ -177,7 +171,7 @@ async function main() {
       phoneNumber: '+1 (555) 303-4040',
       email: 'mvance@cpmas.com',
       joiningDate: new Date('2025-07-15'),
-      monthlySalary: 4200.0,
+      monthlySalary: '4200.0',
       employmentStatus: 'ACTIVE',
     },
   ];
@@ -200,5 +194,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-    await pool.end();
   });

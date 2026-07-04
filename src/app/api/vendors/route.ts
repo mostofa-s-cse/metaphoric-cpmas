@@ -101,9 +101,9 @@ async function postHandler(request: Request) {
       contactNumber,
       address,
       workType,
-      contractAmount: cAmt,
-      paidAmount: pAmt,
-      dueAmount: dAmt,
+      contractAmount: cAmt as any,
+      paidAmount: pAmt as any,
+      dueAmount: dAmt as any,
       notes,
     },
   });
@@ -116,9 +116,9 @@ async function postHandler(request: Request) {
         return {
           vendorId: vendor.id,
           projectId: a.projectId,
-          contractAmount: actAmt,
-          paidAmount: pdAmt,
-          dueAmount: actAmt - pdAmt,
+          contractAmount: actAmt as any,
+          paidAmount: pdAmt as any,
+          dueAmount: (actAmt - pdAmt) as any,
         };
       }),
     });

@@ -11,6 +11,8 @@ import { Modal } from '@/components/ui/Modal';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -169,7 +171,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     if (activeTab === 'attendance' && attendanceData) {
       const records: Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'> = {};
-      (attendanceData.attendance || []).forEach((att: any) => {
+      (attendanceData.attendances || []).forEach((att: any) => {
         records[att.labourId] = att.status;
       });
 
@@ -440,16 +442,12 @@ export default function EmployeesPage() {
       {/* Tab 1: Employees */}
       {activeTab === 'employees' && (
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by ID, name or designation..."
-              value={searchEmployee}
-              onChange={(e) => setSearchEmployee(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
-            />
-          </div>
+          <Input
+            placeholder="Search by ID, name or designation..."
+            value={searchEmployee}
+            onChange={(e) => setSearchEmployee(e.target.value)}
+            icon={<Search className="h-4 w-4" />}
+          />
 
           {isFetching ? (
             <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10">
@@ -536,16 +534,12 @@ export default function EmployeesPage() {
       {/* Tab 2: Labour */}
       {activeTab === 'labour' && (
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by worker name or trade trade..."
-              value={searchLabour}
-              onChange={(e) => setSearchLabour(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-800 focus:border-cyan-500/80 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs placeholder:text-slate-600 transition-all"
-            />
-          </div>
+          <Input
+            placeholder="Search by worker name or trade trade..."
+            value={searchLabour}
+            onChange={(e) => setSearchLabour(e.target.value)}
+            icon={<Search className="h-4 w-4" />}
+          />
 
           {isFetching ? (
             <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10">
@@ -760,105 +754,66 @@ export default function EmployeesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Employee ID</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerEmployee('employeeId')}
                     placeholder="e.g. EMP-202"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.employeeId
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={employeeErrors.employeeId?.message}
                   />
-                  {employeeErrors.employeeId && (
-                    <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.employeeId.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Full Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerEmployee('fullName')}
                     placeholder="e.g. David Smith"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.fullName
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={employeeErrors.fullName?.message}
                   />
-                  {employeeErrors.fullName && (
-                    <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.fullName.message}</p>
-                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Designation</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerEmployee('designation')}
                     placeholder="e.g. Project Engineer"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.designation
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={employeeErrors.designation?.message}
                   />
-                  {employeeErrors.designation && (
-                    <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.designation.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Department</label>
-                  <select
+                  <Select
                     {...registerEmployee('department')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={employeeErrors.department?.message}
                   >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Accounts &amp; Finance">Accounts &amp; Finance</option>
-                    <option value="Operations &amp; Management">Operations &amp; Management</option>
-                    <option value="Human Resources">Human Resources</option>
-                    <option value="Procurement">Procurement</option>
-                  </select>
+                    <option value="Engineering" className="bg-slate-900 text-slate-200">Engineering</option>
+                    <option value="Accounts & Finance" className="bg-slate-900 text-slate-200">Accounts & Finance</option>
+                    <option value="Operations & Management" className="bg-slate-900 text-slate-200">Operations & Management</option>
+                    <option value="Human Resources" className="bg-slate-900 text-slate-200">Human Resources</option>
+                    <option value="Procurement" className="bg-slate-900 text-slate-200">Procurement</option>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Phone Number</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerEmployee('phoneNumber')}
                     placeholder="e.g. +1 555-0199"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.phoneNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={employeeErrors.phoneNumber?.message}
                   />
-                  {employeeErrors.phoneNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.phoneNumber.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Email Address</label>
-                  <input
+                  <Input
                     type="email"
                     {...registerEmployee('email')}
                     placeholder="e.g. david@cpmas.com"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.email
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={employeeErrors.email?.message}
                   />
-                  {employeeErrors.email && (
-                    <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.email.message}</p>
-                  )}
                 </div>
               </div>
 
@@ -884,19 +839,11 @@ export default function EmployeesPage() {
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Monthly Salary ($)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerEmployee('monthlySalary')}
                     placeholder="e.g. 5000"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      employeeErrors.monthlySalary
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={employeeErrors.monthlySalary?.message}
                   />
-                  {employeeErrors.monthlySalary && (
-                    <p className="text-rose-400 text-[10px] mt-1">{employeeErrors.monthlySalary.message}</p>
-                  )}
                 </div>
               </div>
 
@@ -934,84 +881,62 @@ export default function EmployeesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Worker Name</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerLabour('name')}
                     placeholder="e.g. Mason Robert"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      labourErrors.name
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={labourErrors.name?.message}
                   />
-                  {labourErrors.name && <p className="text-rose-400 text-[10px] mt-1">{labourErrors.name.message}</p>}
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Phone Number</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerLabour('phoneNumber')}
                     placeholder="e.g. +1 555-8910"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      labourErrors.phoneNumber
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={labourErrors.phoneNumber?.message}
                   />
-                  {labourErrors.phoneNumber && (
-                    <p className="text-rose-400 text-[10px] mt-1">{labourErrors.phoneNumber.message}</p>
-                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Trade Craft</label>
-                  <select
+                  <Select
                     {...registerLabour('trade')}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                    error={labourErrors.trade?.message}
                   >
-                    <option value="Mason">Mason</option>
-                    <option value="Carpenter">Carpenter</option>
-                    <option value="Steel Worker">Steel Worker</option>
-                    <option value="Plumber">Plumber</option>
-                    <option value="Electrician">Electrician</option>
-                    <option value="Helper / Laborer">Helper / Laborer</option>
-                    <option value="Site Supervisor">Site Supervisor</option>
-                  </select>
+                    <option value="Mason" className="bg-slate-900 text-slate-200">Mason</option>
+                    <option value="Carpenter" className="bg-slate-900 text-slate-200">Carpenter</option>
+                    <option value="Steel Worker" className="bg-slate-900 text-slate-200">Steel Worker</option>
+                    <option value="Plumber" className="bg-slate-900 text-slate-200">Plumber</option>
+                    <option value="Electrician" className="bg-slate-900 text-slate-200">Electrician</option>
+                    <option value="Helper / Laborer" className="bg-slate-900 text-slate-200">Helper / Laborer</option>
+                    <option value="Site Supervisor" className="bg-slate-900 text-slate-200">Site Supervisor</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Daily Wage ($)</label>
-                  <input
-                    type="text"
+                  <Input
                     {...registerLabour('dailyWage')}
                     placeholder="e.g. 150"
-                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all ${
-                      labourErrors.dailyWage
-                        ? 'border-rose-500/60 focus:border-rose-500 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-cyan-500 focus:ring-cyan-500/30'
-                    }`}
+                    error={labourErrors.dailyWage?.message}
                   />
-                  {labourErrors.dailyWage && (
-                    <p className="text-rose-400 text-[10px] mt-1">{labourErrors.dailyWage.message}</p>
-                  )}
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
-                <select
+                <Select
                   {...registerLabour('projectId')}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 text-xs transition-all cursor-pointer"
+                  error={labourErrors.projectId?.message}
                 >
                   {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
+                    <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
                       {p.code} - {p.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5">
@@ -1057,23 +982,20 @@ export default function EmployeesPage() {
                   <span className="font-bold text-slate-400">Fixed monthly pay:</span>{' '}
                   {formatCurrency(selectedEmployee.monthlySalary)}
                 </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              </div>              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-450 text-xs font-semibold mb-2">Billing Month</label>
-                  <input
+                  <Input
                     type="month"
                     required
                     value={salaryFormData.month}
                     onChange={(e) => setSalaryFormData({ ...salaryFormData, month: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
 
                 <div>
                   <label className="block text-slate-450 text-xs font-semibold mb-2">Basic Salary ($)</label>
-                  <input
+                  <Input
                     type="number"
                     step="any"
                     required
@@ -1092,7 +1014,6 @@ export default function EmployeesPage() {
                         ).toString(),
                       });
                     }}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
               </div>
@@ -1100,7 +1021,7 @@ export default function EmployeesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-455 text-xs font-semibold mb-2">Allowance/Bonus ($)</label>
-                  <input
+                  <Input
                     type="number"
                     step="any"
                     value={salaryFormData.bonus}
@@ -1118,13 +1039,12 @@ export default function EmployeesPage() {
                         ).toString(),
                       });
                     }}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
 
                 <div>
                   <label className="block text-slate-455 text-xs font-semibold mb-2">Deductions ($)</label>
-                  <input
+                  <Input
                     type="number"
                     step="any"
                     value={salaryFormData.deduction}
@@ -1142,7 +1062,6 @@ export default function EmployeesPage() {
                         ).toString(),
                       });
                     }}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                   />
                 </div>
               </div>
@@ -1150,39 +1069,37 @@ export default function EmployeesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-455 text-xs font-semibold mb-2">Actual Paid Net ($)</label>
-                  <input
+                  <Input
                     type="number"
                     step="any"
                     required
                     value={salaryFormData.paidAmount}
                     onChange={(e) => setSalaryFormData({ ...salaryFormData, paidAmount: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs font-bold text-cyan-400"
+                    className="font-bold text-cyan-400"
                   />
                 </div>
 
                 <div>
                   <label className="block text-slate-455 text-xs font-semibold mb-2">Payment Method</label>
-                  <select
+                  <Select
                     value={salaryFormData.paymentMethod}
                     onChange={(e) => setSalaryFormData({ ...salaryFormData, paymentMethod: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs transition-all cursor-pointer"
                   >
-                    <option value="CASH">CASH</option>
-                    <option value="BANK">BANK TRANSFER</option>
-                    <option value="CHEQUE">CHEQUE</option>
-                    <option value="MOBILE_BANKING">MOBILE BANKING</option>
-                  </select>
+                    <option value="CASH" className="bg-slate-900 text-slate-200">CASH</option>
+                    <option value="BANK" className="bg-slate-900 text-slate-200">BANK TRANSFER</option>
+                    <option value="CHEQUE" className="bg-slate-900 text-slate-200">CHEQUE</option>
+                    <option value="MOBILE_BANKING" className="bg-slate-900 text-slate-200">MOBILE BANKING</option>
+                  </Select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-455 text-xs font-semibold mb-2">Reference # (Check/Receipt No.)</label>
-                <input
+                <Input
                   type="text"
                   value={salaryFormData.referenceNumber}
                   onChange={(e) => setSalaryFormData({ ...salaryFormData, referenceNumber: e.target.value })}
                   placeholder="e.g. TXN-10294"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
                 />
               </div>
 
@@ -1193,7 +1110,7 @@ export default function EmployeesPage() {
                   value={salaryFormData.notes}
                   onChange={(e) => setSalaryFormData({ ...salaryFormData, notes: e.target.value })}
                   placeholder="Add payroll transaction details..."
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-250 focus:outline-none text-xs"
+                  className="w-full px-3 py-2 bg-slate-950/40 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:ring-1 text-xs transition-all placeholder:text-slate-650 shadow-inner"
                 />
               </div>
 

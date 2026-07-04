@@ -93,8 +93,8 @@ async function postHandler(request: Request) {
       category,
       quantity: qty,
       unit,
-      unitPrice: price,
-      totalPrice: total,
+      unitPrice: price as any,
+      totalPrice: total as any,
       supplierId,
       projectId,
       purchaseDate: new Date(purchaseDate),
@@ -109,7 +109,7 @@ async function postHandler(request: Request) {
       projectId,
       expenseCategory: 'MATERIALS',
       paidTo: `Material Purchase: ${name}`,
-      amount: total,
+      amount: total as any,
       paymentMethod: 'CASH', // default
       referenceNumber: invoiceNumber,
       notes: `Auto-generated from Material Purchase registry. Qty: ${qty} ${unit} @ $${price}/${unit}`,
@@ -118,13 +118,17 @@ async function postHandler(request: Request) {
     },
   });
 
-  // Automatically update the supplier's due balance if not fully cleared (simulated by adding to current due)
+  // Automatically update the supplier's due balance if not fully cleared
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    select: { currentDue: true },
+  });
+  const currentDueNum = supplier ? Number(supplier.currentDue) : 0.0;
+
   await prisma.supplier.update({
     where: { id: supplierId },
     data: {
-      currentDue: {
-        increment: total,
-      },
+      currentDue: String(currentDueNum + total),
     },
   });
 

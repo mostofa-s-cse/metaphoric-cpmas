@@ -3,7 +3,7 @@
  * All API endpoints with caching, invalidation, and tag management.
  * Split into domain-specific endpoint builders for scalability.
  */
-import { createApi, fetchBaseQuery, retry } from '@reduxjs/toolkit/query/react';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // ─── Type Definitions ─────────────────────────────────────────────────────────
 
@@ -211,20 +211,17 @@ export interface ApiDocument {
 
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
-const rawBaseQuery = retry(
-  fetchBaseQuery({
-    baseUrl: '/api',
-    credentials: 'include', // send cookies automatically (JWT)
-    prepareHeaders: (headers) => {
-      // Disable caching on client-side fetch requests
-      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      headers.set('Pragma', 'no-cache');
-      headers.set('Expires', '0');
-      return headers;
-    },
-  }),
-  { maxRetries: 0 }
-);
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: '/api',
+  credentials: 'include', // send cookies automatically (JWT)
+  prepareHeaders: (headers) => {
+    // Disable caching on client-side fetch requests
+    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    return headers;
+  },
+});
 
 /**
  * Custom baseQuery wrapper that unwraps the standardized API envelope:
@@ -241,6 +238,16 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
   const result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error) {
+    if (result.error.status === 401) {
+      api.dispatch({ type: 'auth/clearUser' });
+      if (typeof window !== 'undefined') {
+        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+        if (window.location.pathname.startsWith('/dashboard')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+
     // Try to extract the envelope message from error response
     const errorData = result.error.data as any;
     if (errorData?.status === 'error' && errorData?.message) {
@@ -653,7 +660,7 @@ export const cpmasApi = createApi({
 
     // ── ATTENDANCE ───────────────────────────────────────────────────────────
 
-    getAttendance: builder.query<{ attendance: any[] }, { labourId?: string; date?: string }>({
+    getAttendance: builder.query<{ attendances: any[] }, { labourId?: string; date?: string }>({
       query: (params) => {
         const qs = new URLSearchParams(params as any).toString();
         return `/attendance${qs ? `?${qs}` : ''}`;
