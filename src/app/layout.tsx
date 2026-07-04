@@ -14,19 +14,41 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'Metaphoric Architect | Dhaka',
-  description:
-    'Metaphoric Architect, Dhaka. 15,897 likes · 147 talking about this. Architecture | Design | Planning | Construction | Consulting',
-  keywords: [
-    'metaphoric architect',
-    'architecture dhaka',
-    'interior design',
-    'planning',
-    'construction',
-    'consulting'
-  ],
-};
+import { prisma } from '@/lib/db';
+
+export async function generateMetadata(): Promise<Metadata> {
+  let brand: any = null;
+  try {
+    const brandSettings = await prisma.websiteSettings.findUnique({
+      where: { key: 'BRAND_INFO' }
+    });
+    brand = brandSettings?.value as any;
+  } catch (e) {
+    console.error('Failed to load metadata brand settings', e);
+  }
+
+  const title = brand?.nameAlt || 'Metaphoric Architect | Dhaka';
+  const description = brand?.studioDesc || 'Metaphoric Architect is a Dhaka-based firm delivering architecture, design, planning, construction & consulting services across Bangladesh.';
+  const favicon = brand?.faviconUrl || '/favicon.ico';
+
+  return {
+    title,
+    description,
+    keywords: [
+      'metaphoric architect',
+      'architecture dhaka',
+      'interior design',
+      'planning',
+      'construction',
+      'consulting'
+    ],
+    icons: {
+      icon: favicon,
+      shortcut: favicon,
+      apple: favicon
+    }
+  };
+}
 
 export default function RootLayout({
   children,

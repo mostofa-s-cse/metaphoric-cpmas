@@ -17,6 +17,7 @@ export default async function PortfolioPage() {
     category: item.category,
     coverImage: item.coverImage,
     order: item.order,
+    theChallenge: item.theChallenge,
   }));
 
   return <PortfolioClient initialItems={serializedItems} />;

@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Save, Loader2, Upload, X } from 'lucide-react';
 import { useGetTeamQuery, useAddTeamMutation, useUpdateTeamMutation, useDeleteTeamMutation } from '@/store/api/websiteApi';
 import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/hooks/useToast';
 
 export function TeamTab() {
   const { data: items = [], isLoading } = useGetTeamQuery();
-  const [addItem] = useAddTeamMutation();
-  const [updateItem] = useUpdateTeamMutation();
+  const [addItem, { isLoading: isAdding }] = useAddTeamMutation();
+  const [updateItem, { isLoading: isUpdating }] = useUpdateTeamMutation();
   const [deleteItem] = useDeleteTeamMutation();
+  const toast = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -53,21 +55,25 @@ export function TeamTab() {
 
   const handleSave = async () => {
     try {
-      if (editingId) {
-        await updateItem({ id: editingId, data: formData }).unwrap();
-      } else {
-        await addItem(formData).unwrap();
-      }
+      const promise = editingId
+        ? updateItem({ id: editingId, data: formData }).unwrap()
+        : addItem(formData).unwrap();
+      await toast.handlePromise(promise, {
+        successMessage: editingId ? 'Team member updated successfully' : 'Team member added successfully',
+        errorMessage: 'Failed to save team member',
+      });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to save.');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this?')) {
-      await deleteItem(id).unwrap();
+      await toast.handlePromise(deleteItem(id).unwrap(), {
+        successMessage: 'Team member deleted successfully',
+        errorMessage: 'Failed to delete team member',
+      });
     }
   };
 
@@ -136,9 +142,10 @@ export function TeamTab() {
             )}
           </div>
           <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
-            <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium">Cancel</button>
-            <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium">
-              <Save className="w-4 h-4" /> Save
+            <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium cursor-pointer">Cancel</button>
+            <button onClick={handleSave} disabled={isAdding || isUpdating} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium cursor-pointer disabled:opacity-50">
+              {isAdding || isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isAdding || isUpdating ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>

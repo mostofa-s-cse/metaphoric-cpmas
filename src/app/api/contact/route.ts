@@ -32,21 +32,28 @@ export async function POST(req: Request) {
     });
 
     // Send email via nodemailer
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+    const smtpSetting = await prisma.websiteSettings.findUnique({
+      where: { key: 'SMTP_SETTINGS' },
     });
 
-    const toEmail = process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+    const smtp = smtpSetting?.value as any;
 
-    if (toEmail && process.env.SMTP_PASS) {
+    if (smtp && smtp.user && smtp.pass && smtp.host) {
+      const transporter = nodemailer.createTransport({
+        host: smtp.host || 'smtp.gmail.com',
+        port: parseInt(smtp.port) || 587,
+        secure: smtp.secure === true || smtp.secure === 'true',
+        auth: {
+          user: smtp.user,
+          pass: smtp.pass,
+        },
+      });
+
+      const toEmail = smtp.notificationEmail || smtp.user;
+      const fromEmail = smtp.fromEmail || smtp.user;
+
       const mailOptions = {
-        from: process.env.SMTP_USER,
+        from: fromEmail,
         to: toEmail,
         subject: `New Contact Inquiry - ${name}`,
         html: `
@@ -63,7 +70,44 @@ export async function POST(req: Request) {
         console.log('Email sent successfully');
       } catch (emailError) {
         console.error('Error sending email:', emailError);
-        // Continue even if email fails
+      }
+    } else {
+      // Send email via nodemailer fallback env
+      const envUser = process.env.SMTP_USER;
+      const envPass = process.env.SMTP_PASS;
+
+      if (envUser && envPass) {
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          auth: {
+            user: envUser,
+            pass: envPass,
+          },
+        });
+
+        const toEmail = process.env.NOTIFICATION_EMAIL || envUser;
+
+        const mailOptions = {
+          from: envUser,
+          to: toEmail,
+          subject: `New Contact Inquiry - ${name}`,
+          html: `
+            <h2>New Contact Inquiry</h2>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Project Scope:</strong> ${scope}</p>
+            <p><strong>Details:</strong><br/>${details || 'No details provided.'}</p>
+          `,
+        };
+
+        try {
+          await transporter.sendMail(mailOptions);
+          console.log('Email sent successfully via fallback env');
+        } catch (emailError) {
+          console.error('Error sending email via fallback env:', emailError);
+        }
       }
     }
 

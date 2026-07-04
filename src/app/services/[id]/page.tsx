@@ -92,7 +92,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                 </h2>
                 {/* Process description content splits by paragraph */}
                 {service.description.split('\n').filter(p => p.trim()).map((paragraph, index) => (
-                  <p key={index} className="text-[#A69F95] text-base leading-loose font-light mb-6">
+                  <p key={index} className="text-[#A69F95] text-base leading-loose font-light mb-6 break-words">
                     {paragraph}
                   </p>
                 ))}

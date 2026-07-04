@@ -26,6 +26,7 @@ import {
   Globe
 } from 'lucide-react';
 import Link from 'next/link';
+import { useGetSettingsQuery } from '@/store/api/websiteApi';
 
 interface NavItem {
   name: string;
@@ -123,6 +124,8 @@ const navItems: NavItem[] = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
+  const { data: settings } = useGetSettingsQuery();
+  const brand = settings?.BRAND_INFO || {};
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -178,12 +181,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="absolute top-0 -left-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px] -z-10 pointer-events-none" />
         
         <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800/60">
-          <div className="h-9 w-9 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.15)]">
-            <HardHat className="h-5 w-5" />
+          <div className="h-9 w-9 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.15)] overflow-hidden p-1">
+            {brand.logoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={brand.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <HardHat className="h-5 w-5" />
+            )}
           </div>
           <div>
             <span className="font-bold text-sm bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wide">
-              Metaphoric Architect
+              {brand.nameAlt || brand.name || 'Metaphoric Architect'}
             </span>
             <p className="text-[10px] text-slate-500 font-medium -mt-0.5">Management Portal</p>
           </div>
@@ -243,10 +251,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-full animate-in slide-in-from-left duration-250">
             <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-center text-cyan-400">
-                  <HardHat className="h-4.5 w-4.5" />
+                <div className="h-8 w-8 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-center text-cyan-400 overflow-hidden p-1">
+                  {brand.logoUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={brand.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <HardHat className="h-4.5 w-4.5" />
+                  )}
                 </div>
-                <span className="font-bold text-sm text-cyan-400">Metaphoric Architect</span>
+                <span className="font-bold text-sm text-cyan-400">
+                  {brand.name || 'Metaphoric'}
+                </span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
                 <X className="h-5 w-5" />

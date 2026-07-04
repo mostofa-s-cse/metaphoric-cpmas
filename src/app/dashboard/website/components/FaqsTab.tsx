@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Save, Loader2, Upload, X } from 'lucide-react';
 import { useGetFaqsQuery, useAddFaqMutation, useUpdateFaqMutation, useDeleteFaqMutation } from '@/store/api/websiteApi';
 import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/hooks/useToast';
 
 export function FaqsTab() {
   const { data: items = [], isLoading } = useGetFaqsQuery();
-  const [addItem] = useAddFaqMutation();
-  const [updateItem] = useUpdateFaqMutation();
+  const [addItem, { isLoading: isAdding }] = useAddFaqMutation();
+  const [updateItem, { isLoading: isUpdating }] = useUpdateFaqMutation();
   const [deleteItem] = useDeleteFaqMutation();
+  const toast = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -47,21 +49,25 @@ export function FaqsTab() {
 
   const handleSave = async () => {
     try {
-      if (editingId) {
-        await updateItem({ id: editingId, data: formData }).unwrap();
-      } else {
-        await addItem(formData).unwrap();
-      }
+      const promise = editingId
+        ? updateItem({ id: editingId, data: formData }).unwrap()
+        : addItem(formData).unwrap();
+      await toast.handlePromise(promise, {
+        successMessage: editingId ? 'FAQ updated successfully' : 'FAQ added successfully',
+        errorMessage: 'Failed to save FAQ',
+      });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to save.');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this?')) {
-      await deleteItem(id).unwrap();
+      await toast.handlePromise(deleteItem(id).unwrap(), {
+        successMessage: 'FAQ deleted successfully',
+        errorMessage: 'Failed to delete FAQ',
+      });
     }
   };
 
@@ -110,9 +116,10 @@ export function FaqsTab() {
             <textarea name="answer" value={formData.answer} onChange={handleChange} rows={3} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
           </div>
           <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
-            <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium">Cancel</button>
-            <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium">
-              <Save className="w-4 h-4" /> Save
+            <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium cursor-pointer">Cancel</button>
+            <button onClick={handleSave} disabled={isAdding || isUpdating} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium cursor-pointer disabled:opacity-50">
+              {isAdding || isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isAdding || isUpdating ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>

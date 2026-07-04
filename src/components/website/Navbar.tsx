@@ -11,6 +11,8 @@ const BRAND = {
   tagline: 'Architect',
   followers: '15.8K',
   facebook: 'https://www.facebook.com/metaphoricarchitect',
+  logoUrl: '',
+  faviconUrl: '',
 };
 
 export default function Navbar() {
@@ -65,8 +67,13 @@ export default function Navbar() {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-4 group cursor-pointer cursor-expand">
-            <div className="h-12 w-12 border border-[#D4AF37]/30 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 group-hover:border-[#D4AF37]">
-              <Building2 className="h-5 w-5 text-[#D4AF37]" strokeWidth={1.5} />
+            <div className="h-12 w-12 border border-[#D4AF37]/30 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 group-hover:border-[#D4AF37] overflow-hidden">
+              {brand.logoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={brand.logoUrl} alt={brand.name} className="w-full h-full object-cover" />
+              ) : (
+                <Building2 className="h-5 w-5 text-[#D4AF37]" strokeWidth={1.5} />
+              )}
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-playfair tracking-[0.1em] text-[#FDFBF7] uppercase leading-none">
@@ -114,7 +121,7 @@ export default function Navbar() {
               href={isLoggedIn ? '/dashboard' : '/login'}
               className="px-8 py-3 text-[10px] font-medium tracking-[0.2em] uppercase text-[#141210] bg-[#D4AF37] hover:bg-[#E5C158] transition-all flex items-center gap-3 hover:shadow-[0_0_40px_rgba(212,175,55,0.2)]"
             >
-              Login
+              {isLoggedIn ? 'Dashboard' : 'Login'}
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -160,7 +167,7 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(false)}
             className="inline-flex items-center gap-3 text-[#D4AF37] text-sm font-medium tracking-widest uppercase mt-4"
           >
-            Login <ArrowRight className="h-4 w-4" />
+            {isLoggedIn ? 'Dashboard' : 'Login'} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>

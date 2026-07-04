@@ -9,13 +9,15 @@ import { TeamTab } from './components/TeamTab';
 import { TrustTab } from './components/TrustTab';
 import { TestimonialsTab } from './components/TestimonialsTab';
 import { FaqsTab } from './components/FaqsTab';
+import { useToast } from '@/hooks/useToast';
 
 export default function WebsiteManagementPage() {
   const [activeTab, setActiveTab] = useState('settings');
+  const toast = useToast();
 
   const tabs = [
     { id: 'settings', label: 'General Settings', icon: Settings },
-    { id: 'sections', label: 'Page Sections', icon: Image },
+    { id: 'sections', label: 'Hero Section', icon: Image },
     { id: 'services', label: 'Services', icon: Grid },
     { id: 'portfolio', label: 'Portfolio (Case Studies)', icon: FolderKanban },
     { id: 'team', label: 'Team', icon: Users },
@@ -73,6 +75,7 @@ export default function WebsiteManagementPage() {
 function GeneralSettingsTab() {
   const { data: settings, isLoading } = useGetSettingsQuery();
   const [updateSetting, { isLoading: isUpdating }] = useUpdateSettingMutation();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     name: 'Metaphoric',
@@ -88,7 +91,35 @@ function GeneralSettingsTab() {
     years: '10+',
     projects: '200+',
     satisfaction: '98%',
+    logoUrl: '',
+    faviconUrl: '',
+    studioDesc: 'Metaphoric Architect is a Dhaka-based firm specializing in architecture, interior design, urban planning, construction management, and consulting.',
   });
+
+  const handleAssetUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.url) {
+        setFormData((prev) => ({ ...prev, [fieldName]: json.data.url }));
+        toast.success('Asset uploaded successfully!');
+      } else {
+        toast.error('Upload failed.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Upload failed.');
+    }
+  };
 
   useEffect(() => {
     if (settings && settings.BRAND_INFO) {
@@ -96,17 +127,21 @@ function GeneralSettingsTab() {
     }
   }, [settings]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSave = async () => {
     try {
-      await updateSetting({ key: 'BRAND_INFO', value: formData }).unwrap();
-      alert('Settings saved successfully!');
+      await toast.handlePromise(
+        updateSetting({ key: 'BRAND_INFO', value: formData }).unwrap(),
+        {
+          successMessage: 'Settings saved successfully!',
+          errorMessage: 'Failed to save settings.',
+        }
+      );
     } catch (err) {
       console.error(err);
-      alert('Failed to save settings.');
     }
   };
 
@@ -146,6 +181,10 @@ function GeneralSettingsTab() {
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">Tagline</label>
             <input type="text" name="tagline" value={formData.tagline} onChange={handleChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Studio / Firm Description</label>
+            <textarea name="studioDesc" value={formData.studioDesc || ''} onChange={handleChange} rows={3} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none" placeholder="Description of the studio..."></textarea>
           </div>
         </div>
 
@@ -205,6 +244,52 @@ function GeneralSettingsTab() {
             </div>
           </div>
         </div>
+
+        {/* Branding Assets */}
+        <div className="space-y-4 p-5 bg-slate-950/50 border border-slate-800/80 rounded-xl md:col-span-2">
+          <h3 className="text-sm font-semibold text-cyan-400 mb-3 border-b border-slate-800 pb-2">Branding Assets</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Website Logo */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Website Logo</label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg cursor-pointer transition-colors border border-slate-700 hover:border-cyan-500">
+                  <Upload className="w-4 h-4" />
+                  Upload Logo
+                  <input type="file" accept="image/*" onChange={(e) => handleAssetUpload(e, 'logoUrl')} className="hidden" />
+                </label>
+                {formData.logoUrl && (
+                  <span className="text-xs text-slate-500 truncate max-w-[200px]">{formData.logoUrl.split('/').pop()}</span>
+                )}
+              </div>
+              {formData.logoUrl && (
+                <div className="h-16 w-16 rounded-xl overflow-hidden border border-slate-700 relative mt-3 p-1 bg-slate-900/60">
+                  <img src={formData.logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                </div>
+              )}
+            </div>
+
+            {/* Website Favicon */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Website Favicon</label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg cursor-pointer transition-colors border border-slate-700 hover:border-cyan-500">
+                  <Upload className="w-4 h-4" />
+                  Upload Favicon
+                  <input type="file" accept="image/*" onChange={(e) => handleAssetUpload(e, 'faviconUrl')} className="hidden" />
+                </label>
+                {formData.faviconUrl && (
+                  <span className="text-xs text-slate-500 truncate max-w-[200px]">{formData.faviconUrl.split('/').pop()}</span>
+                )}
+              </div>
+              {formData.faviconUrl && (
+                <div className="h-16 w-16 rounded-xl overflow-hidden border border-slate-700 relative mt-3 p-2 bg-slate-900/60">
+                  <img src={formData.faviconUrl} alt="Favicon Preview" className="w-full h-full object-contain" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -216,6 +301,7 @@ function GeneralSettingsTab() {
 function PageSectionsTab() {
   const { data: sections, isLoading } = useGetSectionsQuery();
   const [updateSection, { isLoading: isUpdating }] = useUpdateSectionMutation();
+  const toast = useToast();
 
   const [heroData, setHeroData] = useState({
     sectionKey: 'HERO',
@@ -249,7 +335,7 @@ function PageSectionsTab() {
       URL.revokeObjectURL(objectUrl);
       
       if (img.width < 1920 || img.height < 1080) {
-        alert(`Warning: The recommended image size is 1920x1080 pixels for the best quality on large screens. Your image is ${img.width}x${img.height} pixels. It will still be uploaded, but may look blurry.`);
+        toast.warning(`Warning: The recommended image size is 1920x1080 pixels for the best quality on large screens. Your image is ${img.width}x${img.height} pixels. It will still be uploaded, but may look blurry.`);
       }
 
       const formData = new FormData();
@@ -263,12 +349,13 @@ function PageSectionsTab() {
         const json = await res.json();
         if (res.ok && json.data?.url) {
           setHeroData((prev) => ({ ...prev, imageUrl: json.data.url }));
+          toast.success('Image uploaded successfully!');
         } else {
-          alert('Upload failed.');
+          toast.error('Upload failed.');
         }
       } catch (err) {
         console.error(err);
-        alert('Upload failed.');
+        toast.error('Upload failed.');
       }
     };
     img.src = objectUrl;
@@ -276,11 +363,15 @@ function PageSectionsTab() {
 
   const handleSave = async () => {
     try {
-      await updateSection(heroData).unwrap();
-      alert('Hero section saved successfully!');
+      await toast.handlePromise(
+        updateSection(heroData).unwrap(),
+        {
+          successMessage: 'Hero section saved successfully!',
+          errorMessage: 'Failed to save hero section.',
+        }
+      );
     } catch (err) {
       console.error(err);
-      alert('Failed to save hero section.');
     }
   };
 

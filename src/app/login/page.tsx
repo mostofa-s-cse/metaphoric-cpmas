@@ -4,7 +4,7 @@
  * CPMAS — Login Page
  * Powered by React Hook Form + Zod validation + RTK Query login mutation.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
@@ -24,6 +24,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [brand, setBrand] = useState({
+    name: 'Metaphoric Architect',
+    logoUrl: '',
+  });
+
+  useEffect(() => {
+    fetch('/api/website/public')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.data?.settings?.BRAND_INFO) {
+          const info = json.data.settings.BRAND_INFO;
+          setBrand({
+            name: info.nameAlt || info.name || 'Metaphoric Architect',
+            logoUrl: info.logoUrl || '',
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    document.title = `${brand.name} | Login`;
+  }, [brand.name]);
 
   const {
     register,
@@ -80,11 +103,16 @@ export default function LoginPage() {
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-8 hover:border-slate-700/60 transition-colors">
           {/* Branding */}
           <Link href="/" className="flex flex-col items-center mb-8 group cursor-pointer">
-            <div className="h-14 w-14 bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/30 rounded-2xl flex items-center justify-center text-cyan-400 mb-4 shadow-[0_0_30px_rgba(6,182,212,0.15)] group-hover:scale-105 transition-transform">
-              <HardHat className="h-7 w-7" />
+            <div className="h-14 w-14 bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/30 rounded-2xl flex items-center justify-center text-cyan-400 mb-4 shadow-[0_0_30px_rgba(6,182,212,0.15)] group-hover:scale-105 transition-transform overflow-hidden p-1">
+              {brand.logoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={brand.logoUrl} alt={brand.name} className="w-full h-full object-contain" />
+              ) : (
+                <HardHat className="h-7 w-7" />
+              )}
             </div>
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight group-hover:opacity-80 transition-opacity">
-              Metaphoric Architect
+              {brand.name}
             </h1>
             <p className="text-slate-500 text-xs mt-1.5 text-center font-medium">
               Construction Project Management &amp; Accounting System

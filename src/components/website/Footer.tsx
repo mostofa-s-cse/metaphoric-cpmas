@@ -44,7 +44,7 @@ export default function Footer() {
               <i className="text-[#D4AF37]">vision.</i>
             </h2>
             <p className="text-[#A69F95] text-lg font-light mb-16 max-w-md leading-relaxed">
-              Reach out to discuss your residential, commercial, or urban project in Dhaka and across Bangladesh.
+              Reach out to discuss your residential, commercial, or urban project in {brand.city} and across Bangladesh.
             </p>
             <div className="space-y-10">
               <div>
@@ -56,6 +56,17 @@ export default function Footer() {
                   {brand.email}
                 </a>
               </div>
+              {brand.phone && (
+                <div>
+                  <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Phone</h5>
+                  <a
+                    href={`tel:${brand.phone}`}
+                    className="text-xl font-playfair italic text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand"
+                  >
+                    {brand.phone}
+                  </a>
+                </div>
+              )}
               <div>
                 <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Location</h5>
                 <p className="text-lg font-light text-[#E8E3DB] leading-relaxed">
@@ -73,7 +84,9 @@ export default function Footer() {
                   <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
-                  <span className="font-playfair italic text-lg">metaphoricarchitect</span>
+                  <span className="font-playfair italic text-lg">
+                    {brand.facebook ? brand.facebook.split('/').filter(Boolean).pop() : 'metaphoricarchitect'}
+                  </span>
                   <span className="text-[#D4AF37] text-xs tracking-widest">({brand.followers} fans)</span>
                 </a>
               </div>

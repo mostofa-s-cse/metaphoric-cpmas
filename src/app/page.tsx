@@ -11,27 +11,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/website/Navbar';
 
-// --- Real data from Facebook page: facebook.com/metaphoricarchitect ---
-const BRAND = {
-  name: 'Metaphoric',
-  nameAlt: 'Metaphoric Architect',
-  tagline: 'Architect',
-  city: 'Dhaka, Bangladesh',
-  facebook: 'https://www.facebook.com/metaphoricarchitect',
-  instagram: 'https://www.instagram.com/',
-  email: 'info@metaphoricarchitect.com',
-  phone: '+880 1XXX-XXXXXX',
-  address: 'Dhaka, Bangladesh',
-  services: ['Architecture', 'Design', 'Planning', 'Construction', 'Consulting'],
-  followers: '15.8K',
-  eyebrow: 'Architecture | Design | Planning | Construction',
-  heroLine1: 'Build',
-  heroLine2: 'Dreams.',
-  studioDesc: 'Metaphoric Architect is a Dhaka-based multidisciplinary firm specializing in architecture, interior design, urban planning, construction management, and consulting. We craft spaces that blend timeless form with purposeful function.',
-  years: '10+',
-  projects: '200+',
-  satisfaction: '98%',
-};
+// --- Landing page dynamically loaded from DB API ---
 
 // --- Reusable Scroll Reveal Component ---
 const RevealSection = ({ children, className = '', delay = 0 }: { children: React.ReactNode, className?: string, delay?: number }) => {
@@ -122,7 +102,8 @@ const CounterBadge = ({ value, label }: { value: string; label: string }) => {
   const [count, setCount] = useState(0);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const numericValue = parseInt(value);
+  const parsed = parseInt(value);
+  const numericValue = isNaN(parsed) ? 0 : parsed;
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
@@ -136,9 +117,12 @@ const CounterBadge = ({ value, label }: { value: string; label: string }) => {
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || numericValue === 0) {
+      if (numericValue === 0) setCount(0);
+      return;
+    }
     let start = 0;
-    const step = Math.ceil(numericValue / 40);
+    const step = Math.ceil(numericValue / 40) || 1;
     const interval = setInterval(() => {
       start += step;
       if (start >= numericValue) {
@@ -160,11 +144,27 @@ const CounterBadge = ({ value, label }: { value: string; label: string }) => {
 };
 
 export default function PortfolioLanding() {
+  const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [heroLoaded, setHeroLoaded] = useState(false);
-  const [dynamicBrand, setDynamicBrand] = useState(BRAND);
+  const [dynamicBrand, setDynamicBrand] = useState({
+    name: '',
+    nameAlt: '',
+    tagline: '',
+    city: '',
+    facebook: '',
+    instagram: '',
+    email: '',
+    phone: '',
+    address: '',
+    followers: '',
+    years: '',
+    projects: '',
+    satisfaction: '',
+    studioDesc: '',
+  });
   const [services, setServices] = useState<any[]>([]);
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [team, setTeam] = useState<any[]>([]);
@@ -173,12 +173,20 @@ export default function PortfolioLanding() {
   const [faqs, setFaqs] = useState<any[]>([]);
 
   const [dynamicHero, setDynamicHero] = useState({
-    subtitle: 'Architecture · Design · Planning · Dhaka',
-    title: BRAND.heroLine1,
-    highlight: BRAND.heroLine2,
-    description: BRAND.studioDesc,
-    imageUrl: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2800&q=80',
+    subtitle: '',
+    title: '',
+    highlight: '',
+    description: '',
+    imageUrl: '',
     videoUrl: ''
+  });
+
+  const [dynamicAbout, setDynamicAbout] = useState({
+    subtitle: '',
+    title: '',
+    highlight: '',
+    description: '',
+    imageUrl: ''
   });
 
   useEffect(() => {
@@ -186,17 +194,27 @@ export default function PortfolioLanding() {
       .then(res => res.json())
       .then(json => {
         if (json?.data?.settings?.BRAND_INFO) {
-          setDynamicBrand({ ...BRAND, ...json.data.settings.BRAND_INFO });
+          setDynamicBrand(json.data.settings.BRAND_INFO);
         }
         if (json?.data?.sections?.find((s: any) => s.sectionKey === 'HERO')) {
           const hero = json.data.sections.find((s: any) => s.sectionKey === 'HERO');
           setDynamicHero({
-            subtitle: hero.subtitle || 'Architecture · Design · Planning · Dhaka',
-            title: hero.title || BRAND.heroLine1,
-            highlight: hero.highlight || BRAND.heroLine2,
-            description: hero.description || BRAND.studioDesc,
-            imageUrl: hero.imageUrl || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2800&q=80',
+            subtitle: hero.subtitle || '',
+            title: hero.title || '',
+            highlight: hero.highlight || '',
+            description: hero.description || '',
+            imageUrl: hero.imageUrl || '',
             videoUrl: hero.videoUrl || ''
+          });
+        }
+        if (json?.data?.sections?.find((s: any) => s.sectionKey === 'ABOUT_FIRM')) {
+          const about = json.data.sections.find((s: any) => s.sectionKey === 'ABOUT_FIRM');
+          setDynamicAbout({
+            subtitle: about.subtitle || '',
+            title: about.title || '',
+            highlight: about.highlight || '',
+            description: about.description || '',
+            imageUrl: about.imageUrl || ''
           });
         }
         if (json?.data?.services) setServices(json.data.services);
@@ -205,8 +223,12 @@ export default function PortfolioLanding() {
         if (json?.data?.trustBadges) setTrustBadges(json.data.trustBadges);
         if (json?.data?.testimonials) setTestimonials(json.data.testimonials);
         if (json?.data?.faqs) setFaqs(json.data.faqs);
+        setLoading(false);
       })
-      .catch(console.error);
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -225,9 +247,34 @@ export default function PortfolioLanding() {
 
   // Trigger hero animations after mount
   useEffect(() => {
-    const t = setTimeout(() => setHeroLoaded(true), 100);
-    return () => clearTimeout(t);
-  }, []);
+    if (!loading) {
+      const t = setTimeout(() => setHeroLoaded(true), 100);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#141210] flex flex-col items-center justify-center gap-6">
+        <div className="h-16 w-16 border border-[#D4AF37]/30 rounded-full flex items-center justify-center animate-pulse">
+          <Building2 className="h-6 w-6 text-[#D4AF37]" strokeWidth={1.5} />
+        </div>
+        <div className="w-48 h-1 bg-[#1A1816] rounded-full overflow-hidden border border-[#D4AF37]/10 relative">
+          <div className="absolute inset-0 bg-[#D4AF37] animate-loading-bar" />
+        </div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes loadingBar {
+            0% { left: -100%; right: 100%; }
+            50% { left: 0%; right: 0%; }
+            100% { left: 100%; right: -100%; }
+          }
+          .animate-loading-bar {
+            animation: loadingBar 2s ease-in-out infinite;
+          }
+        `}} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#141210] text-[#E8E3DB] font-sans selection:bg-[#D4AF37]/30 selection:text-[#FDFBF7] overflow-x-hidden font-inter">
@@ -246,13 +293,15 @@ export default function PortfolioLanding() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#141210]/85 via-transparent to-transparent z-10"></div>
           
           {/* Hero Background Image - using img tag with Unsplash */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src={dynamicHero.imageUrl} 
-            alt="Luxury Interior Hero" 
-            className="w-full h-full object-cover hero-kenburns"
-            onLoad={() => setHeroLoaded(true)}
-          />
+          {dynamicHero.imageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img 
+              src={dynamicHero.imageUrl} 
+              alt="Luxury Interior Hero" 
+              className="w-full h-full object-cover hero-kenburns"
+              onLoad={() => setHeroLoaded(true)}
+            />
+          ) : null}
         </div>
 
         {/* Floating gold particles */}
@@ -343,7 +392,7 @@ export default function PortfolioLanding() {
                 transition: 'opacity 1s ease 1.2s, transform 1s ease 1.2s',
               }}
             >
-              <p className="text-[#A69F95] text-sm leading-relaxed font-light">
+              <p className="text-[#A69F95] text-sm leading-relaxed font-light break-words">
                 {dynamicHero.description}
               </p>
               
@@ -396,24 +445,26 @@ export default function PortfolioLanding() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
             <RevealSection className="relative group cursor-expand">
               <div className="absolute -inset-4 bg-[#D4AF37]/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80" 
-                alt="Metaphoric Architect Studio" 
-                className="relative w-full aspect-[3/4] object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-1000 shadow-2xl"
-              />
-              <CounterBadge value="10" label={"Years of\nExcellence"} />
+              {dynamicAbout.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img 
+                  src={dynamicAbout.imageUrl} 
+                  alt="Metaphoric Architect Studio" 
+                  className="relative w-full aspect-[3/4] object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-1000 shadow-2xl"
+                />
+              ) : null}
+              <CounterBadge value={dynamicBrand.years} label={"Years of\nExcellence"} />
             </RevealSection>
             
             <RevealSection delay={200} className="lg:pl-10">
               <h2 className="text-[10px] font-medium tracking-[0.4em] text-[#D4AF37] uppercase mb-12 flex items-center gap-6">
-                <span className="w-12 h-[1px] bg-[#D4AF37]"></span> 01. The Firm
+                <span className="w-12 h-[1px] bg-[#D4AF37]"></span> {dynamicAbout.subtitle}
               </h2>
               <h3 className="text-4xl md:text-5xl lg:text-7xl font-playfair font-normal leading-[1.1] text-[#FDFBF7] mb-10">
-                Spaces that speak <i className="text-[#D4AF37]">purpose</i>.
+                {dynamicAbout.title} <i className="text-[#D4AF37]">{dynamicAbout.highlight}</i>
               </h3>
-              <p className="text-[#A69F95] text-lg leading-relaxed font-light mb-12">
-                {dynamicBrand.studioDesc}
+              <p className="text-[#A69F95] text-lg leading-relaxed font-light mb-12 break-words">
+                {dynamicAbout.description || dynamicBrand.studioDesc}
               </p>
               
               <ul className="space-y-6 mb-16 border-l border-[#D4AF37]/20 pl-8">
@@ -453,7 +504,11 @@ export default function PortfolioLanding() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#141210] via-[#141210]/20 to-transparent"></div>
                   <div className="absolute inset-0 p-12 flex flex-col justify-end">
                     <h4 className="text-4xl font-playfair text-[#FDFBF7] mb-4 group-hover:text-[#D4AF37] transition-colors">{services[0].title}</h4>
-                    <p className="text-[#A69F95] font-light max-w-md text-sm leading-relaxed">{services[0].description}</p>
+                    <p className="text-[#A69F95] font-light max-w-md text-sm leading-relaxed break-words">
+                      {services[0].description && services[0].description.length > 120 
+                        ? services[0].description.slice(0, 120) + '...' 
+                        : services[0].description}
+                    </p>
                     <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium mt-4 flex items-center gap-2">View Details <ArrowRight className="h-3 w-3" /></span>
                   </div>
                 </RevealSection>
@@ -468,7 +523,11 @@ export default function PortfolioLanding() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#141210] to-transparent"></div>
                     <div className="absolute inset-0 p-8 flex flex-col justify-end">
                       <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-3 group-hover:text-[#D4AF37] transition-colors">{services[1].title}</h4>
-                      <p className="text-[#A69F95] text-xs font-light leading-relaxed">{services[1].description}</p>
+                      <p className="text-[#A69F95] text-xs font-light leading-relaxed break-words">
+                        {services[1].description && services[1].description.length > 80 
+                          ? services[1].description.slice(0, 80) + '...' 
+                          : services[1].description}
+                      </p>
                       <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium mt-2 flex items-center gap-2">View Details <ArrowRight className="h-3 w-3" /></span>
                     </div>
                   </RevealSection>
@@ -482,7 +541,11 @@ export default function PortfolioLanding() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#141210] to-transparent"></div>
                     <div className="absolute inset-0 p-8 flex flex-col justify-end">
                       <h4 className="text-2xl font-playfair text-[#FDFBF7] mb-3 group-hover:text-[#D4AF37] transition-colors">{services[2].title}</h4>
-                      <p className="text-[#A69F95] text-xs font-light leading-relaxed">{services[2].description}</p>
+                      <p className="text-[#A69F95] text-xs font-light leading-relaxed break-words">
+                        {services[2].description && services[2].description.length > 80 
+                          ? services[2].description.slice(0, 80) + '...' 
+                          : services[2].description}
+                      </p>
                       <span className="text-[9px] text-[#D4AF37] tracking-[0.3em] uppercase font-medium mt-2 flex items-center gap-2">View Details <ArrowRight className="h-3 w-3" /></span>
                     </div>
                   </RevealSection>
@@ -529,11 +592,16 @@ export default function PortfolioLanding() {
                     </div>
                   </div>
                   <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
-                    <div>
+                    <div className="flex-1 mr-4">
                       <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">{proj.title}</h4>
-                      <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">{proj.category}</p>
+                      <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light mb-4">{proj.category}</p>
+                      {proj.theChallenge && (
+                        <p className="text-[#8C8477] text-sm font-light leading-relaxed line-clamp-2 break-words">
+                          {proj.theChallenge.length > 120 ? proj.theChallenge.slice(0, 120) + '...' : proj.theChallenge}
+                        </p>
+                      )}
                     </div>
-                    <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
+                    <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform self-start mt-2">
                       <ArrowRight strokeWidth={1} />
                     </div>
                   </div>
@@ -655,7 +723,7 @@ export default function PortfolioLanding() {
                 <i className="text-[#D4AF37]">vision.</i>
               </h2>
               <p className="text-[#A69F95] text-lg font-light mb-16 max-w-md leading-relaxed">
-                Reach out to discuss your residential, commercial, or urban project in Dhaka and across Bangladesh.
+                Reach out to discuss your residential, commercial, or urban project in {dynamicBrand.city} and across Bangladesh.
               </p>
               <div className="space-y-10">
                 <div>
@@ -664,6 +732,14 @@ export default function PortfolioLanding() {
                     {dynamicBrand.email}
                   </a>
                 </div>
+                {dynamicBrand.phone && (
+                  <div>
+                    <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Phone</h5>
+                    <a href={`tel:${dynamicBrand.phone}`} className="text-xl font-playfair italic text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand">
+                      {dynamicBrand.phone}
+                    </a>
+                  </div>
+                )}
                 <div>
                   <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Location</h5>
                   <p className="text-lg font-light text-[#E8E3DB] leading-relaxed">
@@ -674,7 +750,9 @@ export default function PortfolioLanding() {
                   <h5 className="text-[9px] font-medium tracking-[0.3em] text-[#8C8477] uppercase mb-3">Follow</h5>
                   <a href={dynamicBrand.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 text-[#E8E3DB] hover:text-[#D4AF37] transition-colors cursor-expand">
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                    <span className="font-playfair italic text-lg">metaphoricarchitect</span>
+                    <span className="font-playfair italic text-lg">
+                      {dynamicBrand.facebook ? dynamicBrand.facebook.split('/').filter(Boolean).pop() : 'metaphoricarchitect'}
+                    </span>
                     <span className="text-[#D4AF37] text-xs tracking-widest">({dynamicBrand.followers} fans)</span>
                   </a>
                 </div>

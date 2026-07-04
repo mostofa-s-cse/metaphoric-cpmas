@@ -91,7 +91,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   <h2 className="text-2xl font-playfair text-[#FDFBF7] flex items-center gap-4">
                     <span className="w-8 h-[1px] bg-[#D4AF37]"></span> The Challenge
                   </h2>
-                  <p className="text-[#A69F95] text-base leading-loose font-light">
+                  <p className="text-[#A69F95] text-base leading-loose font-light break-words">
                     {project.theChallenge}
                   </p>
                 </RevealSection>
@@ -102,7 +102,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   <h2 className="text-2xl font-playfair text-[#FDFBF7] flex items-center gap-4">
                     <span className="w-8 h-[1px] bg-[#D4AF37]"></span> The Solution
                   </h2>
-                  <p className="text-[#A69F95] text-base leading-loose font-light">
+                  <p className="text-[#A69F95] text-base leading-loose font-light break-words">
                     {project.theSolution}
                   </p>
                 </RevealSection>
@@ -113,7 +113,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   <h2 className="text-2xl font-playfair text-[#FDFBF7] flex items-center gap-4">
                     <span className="w-8 h-[1px] bg-[#D4AF37]"></span> The Outcome
                   </h2>
-                  <p className="text-[#A69F95] text-base leading-loose font-light">
+                  <p className="text-[#A69F95] text-base leading-loose font-light break-words">
                     {project.theOutcome}
                   </p>
                 </RevealSection>

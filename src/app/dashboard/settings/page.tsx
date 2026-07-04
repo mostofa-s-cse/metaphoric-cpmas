@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useDispatch } from 'react-redux';
 import { addToast } from '@/store/slices/uiSlice';
 import { useUpdateUserMutation } from '@/store/api/cpmasApi';
+import { useGetSettingsQuery, useUpdateSettingMutation } from '@/store/api/websiteApi';
 import {
   Settings,
   User,
@@ -77,10 +78,49 @@ const TABS = [
 export default function SettingsPage() {
   const { user: currentUser } = useAuth();
   const dispatch = useDispatch();
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'about'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'smtp' | 'about'>('profile');
   const [showPassword, setShowPassword] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
+
+  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
+  const { data: settingsData, isLoading: isLoadingSettings } = useGetSettingsQuery(undefined, { skip: !isAdmin });
+  const [updateSetting, { isLoading: isUpdatingSetting }] = useUpdateSettingMutation();
+
+  const [smtpForm, setSmtpForm] = useState({
+    host: '',
+    port: '587',
+    secure: false,
+    user: '',
+    pass: '',
+    fromEmail: '',
+    notificationEmail: ''
+  });
+
+  useEffect(() => {
+    if (settingsData?.SMTP_SETTINGS) {
+      setSmtpForm({
+        host: settingsData.SMTP_SETTINGS.host || '',
+        port: String(settingsData.SMTP_SETTINGS.port || '587'),
+        secure: settingsData.SMTP_SETTINGS.secure === true,
+        user: settingsData.SMTP_SETTINGS.user || '',
+        pass: settingsData.SMTP_SETTINGS.pass || '',
+        fromEmail: settingsData.SMTP_SETTINGS.fromEmail || '',
+        notificationEmail: settingsData.SMTP_SETTINGS.notificationEmail || ''
+      });
+    }
+  }, [settingsData]);
+
+  const onSmtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateSetting({ key: 'SMTP_SETTINGS', value: smtpForm }).unwrap();
+      dispatch(addToast({ message: 'SMTP settings updated successfully.', variant: 'success' }));
+    } catch {
+      dispatch(addToast({ message: 'Failed to update SMTP settings.', variant: 'error' }));
+    }
+  };
 
   // ─── Profile Form ──────────────────────────────────────────────────────────
 
@@ -207,7 +247,12 @@ export default function SettingsPage() {
         <div className="lg:col-span-3 space-y-4">
           {/* Tab Bar */}
           <div className="flex gap-1 bg-slate-900/50 border border-slate-800 rounded-xl p-1">
-            {TABS.map((tab) => {
+            {[
+              { id: 'profile' as const, label: 'Profile', icon: User },
+              { id: 'security' as const, label: 'Security', icon: Key },
+              ...(isAdmin ? [{ id: 'smtp' as const, label: 'Email SMTP Config', icon: Settings }] : []),
+              { id: 'about' as const, label: 'System Info', icon: Info },
+            ].map((tab) => {
               const TabIcon = tab.icon;
               return (
                 <button
@@ -346,6 +391,133 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* SMTP Config Tab */}
+          {activeTab === 'smtp' && isAdmin && (
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+              <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2 mb-2">
+                <Settings className="h-4 w-4 text-cyan-400" />
+                Email SMTP Configuration
+              </h2>
+              <p className="text-slate-400 text-xs mb-6">
+                Configure the outgoing mail server settings used to send contact inquiries and notifications.
+              </p>
+
+              {isLoadingSettings ? (
+                <div className="flex justify-center p-10"><Loader2 className="animate-spin text-cyan-500 w-8 h-8" /></div>
+              ) : (
+                <form onSubmit={onSmtpSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-400 text-xs font-semibold mb-2">SMTP Host</label>
+                      <input
+                        type="text"
+                        value={smtpForm.host}
+                        onChange={(e) => setSmtpForm({ ...smtpForm, host: e.target.value })}
+                        placeholder="e.g. smtp.gmail.com"
+                        className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 text-xs font-semibold mb-2">SMTP Port</label>
+                      <input
+                        type="number"
+                        value={smtpForm.port}
+                        onChange={(e) => setSmtpForm({ ...smtpForm, port: e.target.value })}
+                        placeholder="e.g. 587"
+                        className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-400 text-xs font-semibold mb-2">SMTP User</label>
+                      <input
+                        type="text"
+                        value={smtpForm.user}
+                        onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })}
+                        placeholder="e.g. user@gmail.com"
+                        className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 text-xs font-semibold mb-2">SMTP Password</label>
+                      <div className="relative">
+                        <input
+                          type={showSmtpPassword ? 'text' : 'password'}
+                          value={smtpForm.pass}
+                          onChange={(e) => setSmtpForm({ ...smtpForm, pass: e.target.value })}
+                          placeholder="Your SMTP password"
+                          className="w-full px-3 py-2.5 pr-10 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                        >
+                          {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-400 text-xs font-semibold mb-2">From Email (Sender)</label>
+                      <input
+                        type="email"
+                        value={smtpForm.fromEmail}
+                        onChange={(e) => setSmtpForm({ ...smtpForm, fromEmail: e.target.value })}
+                        placeholder="e.g. no-reply@metaphoric.com"
+                        className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 text-xs font-semibold mb-2">Notification Recipient Email</label>
+                      <input
+                        type="email"
+                        value={smtpForm.notificationEmail}
+                        onChange={(e) => setSmtpForm({ ...smtpForm, notificationEmail: e.target.value })}
+                        placeholder="e.g. info@metaphoric.com"
+                        className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 py-2">
+                    <input
+                      type="checkbox"
+                      id="smtpSecure"
+                      checked={smtpForm.secure}
+                      onChange={(e) => setSmtpForm({ ...smtpForm, secure: e.target.checked })}
+                      className="h-4 w-4 rounded border-slate-800 bg-slate-950 text-cyan-500 focus:ring-cyan-500/30 focus:ring-opacity-25"
+                    />
+                    <label htmlFor="smtpSecure" className="text-slate-400 text-xs font-semibold cursor-pointer">
+                      Use Secure SSL/TLS Connection (check if using port 465)
+                    </label>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isUpdatingSetting}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold rounded-xl shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60"
+                    >
+                      {isUpdatingSetting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                      Save SMTP Config
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
 

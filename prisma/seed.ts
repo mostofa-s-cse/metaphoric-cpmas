@@ -253,6 +253,57 @@ async function main() {
     });
   }
 
+  // Settings & Sections
+  if ((await prisma.websiteSettings.count()) === 0) {
+    await prisma.websiteSettings.create({
+      data: {
+        key: 'BRAND_INFO',
+        value: {
+          name: 'Metaphoric',
+          nameAlt: 'Metaphoric Architect',
+          tagline: 'Architect',
+          city: 'Dhaka, Bangladesh',
+          facebook: 'https://www.facebook.com/metaphoricarchitect',
+          instagram: 'https://www.instagram.com/',
+          email: 'info@metaphoricarchitect.com',
+          phone: '+880 1XXX-XXXXXX',
+          address: 'Dhaka, Bangladesh',
+          followers: '15.8K',
+          years: '10+',
+          projects: '200+',
+          satisfaction: '98%',
+          studioDesc: 'Metaphoric Architect is a Dhaka-based multidisciplinary firm specializing in architecture, interior design, urban planning, construction management, and consulting. We craft spaces that blend timeless form with purposeful function.'
+        }
+      }
+    });
+  }
+
+  if ((await prisma.websiteSection.count()) === 0) {
+    await prisma.websiteSection.createMany({
+      data: [
+        {
+          sectionKey: 'HERO',
+          title: 'Build',
+          highlight: 'Dreams.',
+          subtitle: 'Architecture · Design · Planning · Dhaka',
+          description: 'Metaphoric Architect is a Dhaka-based firm delivering architecture, design, planning, construction & consulting services across Bangladesh.',
+          imageUrl: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2800&q=80',
+          videoUrl: '',
+          isActive: true
+        },
+        {
+          sectionKey: 'ABOUT_FIRM',
+          title: 'Spaces that speak',
+          highlight: 'purpose.',
+          subtitle: '01. The Firm',
+          description: 'Metaphoric Architect is a Dhaka-based firm specializing in architecture, interior design, urban planning, construction management, and consulting.',
+          imageUrl: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
+          isActive: true
+        }
+      ]
+    });
+  }
+
   console.log('Seeding finished successfully.');
 }
 

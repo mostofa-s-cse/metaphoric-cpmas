@@ -14,6 +14,10 @@ async function getHandler(request: NextRequest) {
   
   // Transform from array of {key, value} to a key-value object
   const settingsObject = settings.reduce((acc, curr) => {
+    // Hide sensitive keys from non-admins
+    if (curr.key === 'SMTP_SETTINGS' && user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+      return acc;
+    }
     acc[curr.key] = curr.value;
     return acc;
   }, {} as Record<string, any>);

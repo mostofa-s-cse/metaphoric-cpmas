@@ -14,6 +14,7 @@ interface PortfolioItem {
   category: string;
   coverImage: string;
   order: number;
+  theChallenge: string | null;
 }
 
 interface PortfolioClientProps {
@@ -105,15 +106,20 @@ export default function PortfolioClient({ initialItems }: PortfolioClientProps) 
                       </div>
                     </div>
                     <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-6">
-                      <div>
+                      <div className="flex-1 mr-4">
                         <h4 className="text-3xl font-playfair text-[#FDFBF7] mb-2 group-hover:text-[#D4AF37] transition-colors duration-500">
                           {proj.title}
                         </h4>
-                        <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light">
+                        <p className="text-[#A69F95] text-xs tracking-widest uppercase font-light mb-3">
                           {proj.category}
                         </p>
+                        {proj.theChallenge && (
+                          <p className="text-[#8C8477] text-sm font-light leading-relaxed line-clamp-2 break-words">
+                            {proj.theChallenge.length > 150 ? proj.theChallenge.slice(0, 150) + '...' : proj.theChallenge}
+                          </p>
+                        )}
                       </div>
-                      <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform">
+                      <div className="text-[#D4AF37] group-hover:translate-x-2 transition-transform self-start mt-2">
                         <ArrowRight strokeWidth={1} />
                       </div>
                     </div>

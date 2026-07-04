@@ -66,8 +66,10 @@ export default async function ServicesPage() {
                     <h3 className="text-2xl font-playfair text-[#FDFBF7] mb-4 group-hover:text-[#D4AF37] transition-colors duration-500">
                       {service.title}
                     </h3>
-                    <p className="text-[#A69F95] text-sm font-light leading-relaxed line-clamp-3">
-                      {service.description}
+                    <p className="text-[#A69F95] text-sm font-light leading-relaxed line-clamp-3 break-words">
+                      {service.description && service.description.length > 150 
+                        ? service.description.slice(0, 150) + '...' 
+                        : service.description}
                     </p>
                   </div>
 
