@@ -68,7 +68,10 @@ run_migrations() {
     # native binaries (and drops symlinks, hence the real entry point below
     # instead of node_modules/.bin/prisma).
     find node_modules/@prisma/engines -type f -exec chmod +x {} + 2>/dev/null || true
-    "$node_bin" node_modules/prisma/build/index.js migrate deploy )
+    # This server's outbound firewall silently drops (doesn't reject) blocked
+    # connections, so Prisma's checkpoint.prisma.io telemetry ping hangs for
+    # minutes on TCP retries instead of failing fast. Disable it.
+    CHECKPOINT_DISABLE=1 "$node_bin" node_modules/prisma/build/index.js migrate deploy )
 }
 
 rollback() {
