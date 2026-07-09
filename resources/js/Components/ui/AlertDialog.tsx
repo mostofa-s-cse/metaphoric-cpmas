@@ -91,7 +91,7 @@ export function AlertDialog({
             variant="danger"
             onClick={onConfirm}
             loading={isConfirming}
-            className="bg-rose-600 hover:bg-rose-550 text-slate-950 font-bold border-none min-w-[100px]"
+            className="bg-rose-600 hover:bg-rose-700 !text-white font-bold border-none min-w-[100px]"
           >
             {confirmText}
           </Button>

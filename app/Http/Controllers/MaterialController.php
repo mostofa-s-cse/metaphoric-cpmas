@@ -55,11 +55,23 @@ class MaterialController extends Controller
             'quantity' => 'required|numeric|min:0',
             'unit' => 'required|string',
             'unitPrice' => 'required|numeric|min:0',
-            'supplierId' => 'required|uuid|exists:suppliers,id',
+            'supplierId' => 'required|string',
+            'newSupplierName' => 'required_if:supplierId,OTHER|nullable|string',
             'projectId' => 'required|uuid|exists:projects,id',
             'purchaseDate' => 'required|date',
             'invoiceNumber' => 'nullable|string',
         ]);
+
+        if ($data['supplierId'] === 'OTHER') {
+            $newSupplier = Supplier::create([
+                'name' => $data['newSupplierName'],
+                'phoneNumber' => '',
+            ]);
+            $data['supplierId'] = $newSupplier->id;
+        } else {
+            Supplier::findOrFail($data['supplierId']);
+        }
+        unset($data['newSupplierName']);
 
         $total = (float) $data['quantity'] * (float) $data['unitPrice'];
         $data['totalPrice'] = $total;

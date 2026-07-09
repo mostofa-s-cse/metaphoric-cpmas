@@ -129,7 +129,7 @@ export default function TransactionsPage() {
     resolver: zodResolver(cashInSchema),
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
-      projectId: '',
+      projectId: 'GENERAL',
       clientName: '',
       amount: '',
       paymentMethod: 'CASH',
@@ -152,7 +152,7 @@ export default function TransactionsPage() {
     resolver: zodResolver(cashOutSchema),
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
-      projectId: '',
+      projectId: 'GENERAL',
       expenseCategory: 'MATERIALS',
       paidTo: '',
       amount: '',
@@ -222,7 +222,7 @@ export default function TransactionsPage() {
   const handleOpenCashIn = () => {
     resetCashIn({
       date: new Date().toISOString().split('T')[0],
-      projectId: '',
+      projectId: 'GENERAL',
       clientName: '',
       amount: '',
       paymentMethod: 'CASH',
@@ -237,7 +237,7 @@ export default function TransactionsPage() {
   const handleOpenCashOut = () => {
     resetCashOut({
       date: new Date().toISOString().split('T')[0],
-      projectId: '',
+      projectId: 'GENERAL',
       expenseCategory: 'MATERIALS',
       paidTo: '',
       amount: '',

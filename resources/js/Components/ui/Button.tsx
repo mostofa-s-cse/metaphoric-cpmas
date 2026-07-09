@@ -32,8 +32,8 @@ export function Button({
   };
 
   const variantStyles = {
-    primary: 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-550 text-slate-950 shadow-lg hover:shadow-cyan-500/10 border-none',
-    secondary: 'bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800',
+    primary: 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-lg hover:shadow-cyan-500/10 border-none',
+    secondary: 'bg-slate-900 hover:bg-slate-900/80 text-slate-300 border border-slate-800',
     danger: 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 hover:border-rose-500/40',
     ghost: 'bg-transparent hover:bg-slate-800/40 text-slate-400 hover:text-slate-200 border-none',
   };

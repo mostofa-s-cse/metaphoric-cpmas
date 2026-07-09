@@ -31,9 +31,18 @@ const materialSchema = z.object({
     message: 'Unit price must be non-negative',
   }),
   supplierId: z.string().min(1, 'Supplier is required'),
+  newSupplierName: z.string().optional().or(z.literal('')),
   projectId: z.string().min(1, 'Project is required'),
   purchaseDate: z.string().min(1, 'Purchase date is required'),
   invoiceNumber: z.string().optional().or(z.literal('')),
+}).superRefine((values, ctx) => {
+  if (values.supplierId === 'OTHER' && !values.newSupplierName?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Supplier name is required',
+      path: ['newSupplierName'],
+    });
+  }
 });
 
 type MaterialFormValues = z.infer<typeof materialSchema>;
@@ -99,6 +108,7 @@ export default function MaterialsPage() {
     handleSubmit,
     reset,
     control,
+    watch,
     formState: { errors },
   } = useForm<MaterialFormValues>({
     resolver: zodResolver(materialSchema),
@@ -109,12 +119,15 @@ export default function MaterialsPage() {
       unit: '',
       unitPrice: '',
       supplierId: '',
+      newSupplierName: '',
       projectId: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       invoiceNumber: '',
     },
     mode: 'all',
   });
+
+  const selectedSupplierId = watch('supplierId');
 
   const fetchMaterials = async () => {
     setIsFetching(true);
@@ -186,6 +199,7 @@ export default function MaterialsPage() {
       unit: '',
       unitPrice: '',
       supplierId: suppliers[0].id,
+      newSupplierName: '',
       projectId: projects[0].id,
       purchaseDate: new Date().toISOString().split('T')[0],
       invoiceNumber: '',
@@ -448,7 +462,17 @@ export default function MaterialsPage() {
                       {s.name}
                     </option>
                   ))}
+                  <option value="OTHER" className="bg-slate-900 text-slate-200">Other...</option>
                 </Select>
+                {selectedSupplierId === 'OTHER' && (
+                  <div className="mt-2.5">
+                    <Input
+                      {...register('newSupplierName')}
+                      placeholder="Enter new supplier name"
+                      error={errors.newSupplierName?.message}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -460,7 +484,7 @@ export default function MaterialsPage() {
                   <option value="" disabled className="bg-slate-900 text-slate-250">Select Project...</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
-                      {p.code} - {p.name}
+                      {p.name}
                     </option>
                   ))}
                 </Select>
