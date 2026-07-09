@@ -1,0 +1,191 @@
+# ============================================================
+# Production Deployment Workflow
+# ============================================================
+#
+# Builds the Next.js app (standalone output) + a Prisma migration
+# toolkit in CI, then ships both to the server over SSH. The server
+# never runs `npm install` or `npm run build` itself -- that's what
+# was getting OOM-killed on the shared host.
+#
+# `prisma migrate deploy` runs automatically on the server as part of
+# every deploy, using the pre-resolved prisma-toolkit (no install
+# there either). A failed migration rolls the whole deploy back.
+#
+# REQUIRED VARIABLES (Settings > Secrets and variables > Actions > Variables):
+#   SSH_HOST      - Server IP or domain
+#   SSH_USER      - SSH username
+#   DEPLOY_DIR    - Absolute path to the cPanel Node.js app root
+#   APP_URL       - URL to curl after restart to confirm the app is up
+#
+# REQUIRED SECRETS (Settings > Secrets and variables > Actions > Secrets):
+#   SSH_PRIVATE_KEY - Private SSH key (server also accepts password auth,
+#                     but key auth is used here since the server supports both)
+#
+# .env is managed manually on the server (DEPLOY_DIR/.env) and is never
+# touched by this workflow -- not written, not overwritten, not deleted.
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (branch, tag, or commit SHA). Defaults to main.'
+        required: false
+        default: main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx') }}
+          restore-keys: |
+            next-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Build
+        run: npm run build
+
+      - name: Assemble app artifact (standalone output)
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/app
+          cp -r .next/standalone/. dist/app/
+          mkdir -p dist/app/.next
+          cp -r .next/static dist/app/.next/static
+          cp -r public dist/app/public
+
+      - name: Assemble prisma toolkit artifact
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/prisma-toolkit/prisma dist/prisma-toolkit/node_modules
+          cp prisma/schema.prisma dist/prisma-toolkit/prisma/
+          cp -r prisma/migrations dist/prisma-toolkit/prisma/
+          cp prisma.config.ts dist/prisma-toolkit/
+          cp package.json dist/prisma-toolkit/
+          cp -r node_modules/prisma dist/prisma-toolkit/node_modules/
+          cp -r node_modules/@prisma dist/prisma-toolkit/node_modules/
+          cp -r node_modules/.prisma dist/prisma-toolkit/node_modules/
+          cp -r node_modules/.bin dist/prisma-toolkit/node_modules/
+          cp -r node_modules/dotenv dist/prisma-toolkit/node_modules/
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: dist/app
+          retention-days: 3
+
+      - name: Upload prisma toolkit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prisma-toolkit
+          path: dist/prisma-toolkit
+          retention-days: 3
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate configuration
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          APP_URL: ${{ vars.APP_URL }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          for var in SSH_HOST SSH_USER DEPLOY_DIR APP_URL SSH_KEY; do
+            if [ -z "${!var}" ]; then
+              echo "::error::$var is required"
+              exit 1
+            fi
+          done
+
+      - name: Checkout (for deploy script)
+        uses: actions/checkout@v4
+
+      - name: Download app artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+          path: dist/app
+
+      - name: Download prisma toolkit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prisma-toolkit
+          path: dist/prisma-toolkit
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add SSH host fingerprint
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync build to server
+        env:
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+        run: |
+          set -Eeuo pipefail
+          ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_DIR' '$DEPLOY_DIR.incoming' '$DEPLOY_DIR.incoming/prisma-toolkit'"
+          rsync -az --delete \
+            --exclude 'public/uploads/' \
+            --exclude '.env' \
+            dist/app/ "$SSH_USER@$SSH_HOST:$DEPLOY_DIR.incoming/"
+          rsync -az --delete \
+            dist/prisma-toolkit/ "$SSH_USER@$SSH_HOST:$DEPLOY_DIR.incoming/prisma-toolkit/"
+
+      - name: Run deploy script on server
+        env:
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          set -Eeuo pipefail
+          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_DIR" "$APP_URL" < .github/scripts/deploy.sh
