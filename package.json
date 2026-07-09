@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
@@ -17,7 +17,6 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@reduxjs/toolkit": "^2.12.0",
-    "@supabase/supabase-js": "^2.108.2",
     "bcryptjs": "^3.0.3",
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.3",

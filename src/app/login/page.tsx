@@ -12,13 +12,6 @@ import { ShieldAlert, HardHat, Eye, EyeOff, Lock, Mail, Loader2, ChevronRight } 
 import { useAuth } from '@/hooks/useAuth';
 import { loginSchema, LoginFormValues } from '@/lib/schemas';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Super Admin', email: 'superadmin@cpmas.com', color: 'text-amber-400 border-amber-500/20 hover:border-amber-500/40' },
-  { label: 'Admin', email: 'admin@cpmas.com', color: 'text-cyan-400 border-cyan-500/20 hover:border-cyan-500/40' },
-  { label: 'Accountant', email: 'accountant@cpmas.com', color: 'text-green-400 border-green-500/20 hover:border-green-500/40' },
-  { label: 'Project Manager', email: 'pm@cpmas.com', color: 'text-blue-400 border-blue-500/20 hover:border-blue-500/40' },
-];
-
 export default function LoginPage() {
   const { login, isLoggingIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -51,7 +44,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -67,12 +59,6 @@ export default function LoginPage() {
     } else {
       setServerError(result.error || 'Invalid credentials');
     }
-  };
-
-  const handleQuickSelect = (email: string) => {
-    setValue('email', email, { shouldValidate: true });
-    setValue('password', 'Password123!', { shouldValidate: true });
-    setServerError('');
   };
 
   const isBusy = isLoggingIn || isSubmitting || isRedirecting;
@@ -204,29 +190,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Demo Quick Login */}
-          <div className="mt-8 border-t border-slate-800/80 pt-6">
-            <p className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider text-center mb-3">
-              Demo Quick Access
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => handleQuickSelect(account.email)}
-                  className={`py-2 px-3 rounded-lg bg-slate-950/40 border text-xs font-semibold transition-all cursor-pointer hover:bg-slate-950/80 ${account.color}`}
-                >
-                  {account.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-center text-slate-600 text-[10px] mt-3">
-              All demo accounts use password:{' '}
-              <code className="text-slate-400 font-mono">Password123!</code>
-            </p>
-          </div>
         </div>
       </div>
     </div>

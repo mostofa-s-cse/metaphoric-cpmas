@@ -9,8 +9,8 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefi
 let prismaClient: PrismaClient;
 
 if (process.env.DATABASE_URL) {
-  // Serverless: cap pool size so we don't exhaust the Supabase pooler's
-  // max client limit when many function instances each open their own pool.
+  // Serverless: cap pool size so many function instances don't each open
+  // their own large pool and exhaust the database's max connection limit.
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
   const adapter = new PrismaPg(pool);
   prismaClient = globalForPrisma.prisma ?? new PrismaClient({ adapter });
