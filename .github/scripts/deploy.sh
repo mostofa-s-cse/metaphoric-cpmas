@@ -64,7 +64,9 @@ run_migrations() {
   node_bin=$(find_node) || { echo "::error::no node binary found (checked PATH and ~/.nvm)"; return 1; }
   ( set -a; source "$DEPLOY_DIR/.env"; set +a
     cd "$DEPLOY_DIR/prisma-toolkit"
-    "$node_bin" node_modules/.bin/prisma migrate deploy )
+    # Invoke the real entry point, not node_modules/.bin/prisma -- that's a
+    # symlink, and actions/upload-artifact's zip round-trip drops symlinks.
+    "$node_bin" node_modules/prisma/build/index.js migrate deploy )
 }
 
 rollback() {
