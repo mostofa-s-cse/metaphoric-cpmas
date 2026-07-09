@@ -2,7 +2,7 @@ import React from 'react';
 import PortfolioClient from './PortfolioClient';
 import { prisma } from '@/lib/db';
 
-export const revalidate = 3600; // revalidate every hour
+export const dynamic = 'force-dynamic';
 
 export default async function PortfolioPage() {
   const items = await prisma.websitePortfolio.findMany({

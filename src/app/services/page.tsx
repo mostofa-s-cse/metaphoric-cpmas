@@ -7,7 +7,7 @@ import CustomCursor from '@/components/website/CustomCursor';
 import RevealSection from '@/components/website/RevealSection';
 import { prisma } from '@/lib/db';
 
-export const revalidate = 3600; // revalidate every hour
+export const dynamic = 'force-dynamic';
 
 export default async function ServicesPage() {
   const services = await prisma.websiteService.findMany({

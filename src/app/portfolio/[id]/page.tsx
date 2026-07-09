@@ -8,7 +8,7 @@ import RevealSection from '@/components/website/RevealSection';
 import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 3600; // revalidate every hour
+export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ id: string }>;

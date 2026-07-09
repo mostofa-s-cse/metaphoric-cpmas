@@ -3,11 +3,7 @@ datasource db {
 }
 
 generator client {
-  provider      = "prisma-client-js"
-  // "native" covers local dev + CI. Add/adjust the second target to match
-  // your production server's actual OpenSSL version (check with `openssl version`
-  // over SSH) if you see a "Query Engine not found" error after deploy.
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 enum Role {
