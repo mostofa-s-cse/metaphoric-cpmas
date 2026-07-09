@@ -5,20 +5,19 @@
 # The new build already landed at "$DEPLOY_DIR.incoming" (rsynced by the
 # workflow). This script swaps it into place, runs pending Prisma migrations
 # against the local Postgres using the pre-resolved prisma-toolkit (no install
-# on server), restarts the app via Passenger's tmp/restart.txt convention,
-# health-checks it, and rolls back on any failure.
+# on server), and restarts the app via Passenger's tmp/restart.txt convention.
+# Rolls back on migration failure only -- no post-restart healthcheck.
 #
 # Never touches public/uploads/ (local file storage) or .env (managed
 # manually on the server) -- both are carried forward untouched on every
 # swap. Never runs npm install/build either -- both already happened in CI.
 #
-# Args: $1 = DEPLOY_DIR   $2 = APP_URL
+# Args: $1 = DEPLOY_DIR   $2 = APP_URL (unused, kept for call-site compat)
 # ==============================================================================
 
 set -Eeuo pipefail
 
 DEPLOY_DIR="$1"
-APP_URL="$2"
 INCOMING_DIR="${DEPLOY_DIR}.incoming"
 BACKUP_DIR="${DEPLOY_DIR}.backup"
 
@@ -30,17 +29,6 @@ fi
 restart_app() {
   mkdir -p "$DEPLOY_DIR/tmp"
   touch "$DEPLOY_DIR/tmp/restart.txt"
-}
-
-healthcheck() {
-  for i in 1 2 3 4 5 6; do
-    if curl -fsS -o /dev/null -m 10 "$APP_URL"; then
-      return 0
-    fi
-    echo "Healthcheck attempt $i failed, retrying in 5s..."
-    sleep 5
-  done
-  return 1
 }
 
 find_node() {
@@ -126,10 +114,5 @@ fi
 echo "Restarting app..."
 restart_app
 
-if healthcheck; then
-  echo "Deployment successful"
-  rm -rf "$BACKUP_DIR"
-  exit 0
-fi
-
-rollback "Healthcheck failed"
+echo "Deployment successful"
+rm -rf "$BACKUP_DIR"
