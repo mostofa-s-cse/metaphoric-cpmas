@@ -43,10 +43,28 @@ healthcheck() {
   return 1
 }
 
+find_node() {
+  if command -v node >/dev/null 2>&1; then
+    command -v node
+    return
+  fi
+  # Non-interactive SSH sessions don't source nvm -- fall back to the newest
+  # nvm-installed version directly.
+  local candidate
+  candidate=$(ls -d "$HOME"/.nvm/versions/node/*/bin/node 2>/dev/null | sort -V | tail -1)
+  if [ -n "$candidate" ]; then
+    echo "$candidate"
+    return 0
+  fi
+  return 1
+}
+
 run_migrations() {
+  local node_bin
+  node_bin=$(find_node) || { echo "::error::no node binary found (checked PATH and ~/.nvm)"; return 1; }
   ( set -a; source "$DEPLOY_DIR/.env"; set +a
     cd "$DEPLOY_DIR/prisma-toolkit"
-    node node_modules/.bin/prisma migrate deploy )
+    "$node_bin" node_modules/.bin/prisma migrate deploy )
 }
 
 rollback() {
