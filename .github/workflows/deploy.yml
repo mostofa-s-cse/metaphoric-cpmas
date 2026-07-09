@@ -78,6 +78,13 @@ jobs:
             next-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Build
+        env:
+          # Placeholder only -- never connected to. src/lib/db.ts constructs
+          # PrismaClient at module load (imported by every API route), and
+          # Prisma 7 requires non-empty options even though `next build`'s
+          # page-data-collection phase never actually runs a query. Real
+          # DATABASE_URL lives only in the server's manually-managed .env.
+          DATABASE_URL: postgresql://build:build@localhost:5432/build?schema=public
         run: npm run build
 
       - name: Assemble app artifact (standalone output)
