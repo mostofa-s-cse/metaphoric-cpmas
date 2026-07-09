@@ -99,15 +99,17 @@ jobs:
       - name: Assemble prisma toolkit artifact
         run: |
           set -Eeuo pipefail
-          mkdir -p dist/prisma-toolkit/prisma/migrations dist/prisma-toolkit/node_modules
+          mkdir -p dist/prisma-toolkit/prisma/migrations
           cp prisma/schema.prisma dist/prisma-toolkit/prisma/
           if [ -d prisma/migrations ]; then cp -r prisma/migrations/. dist/prisma-toolkit/prisma/migrations/; fi
           cp prisma.config.ts dist/prisma-toolkit/
           cp package.json dist/prisma-toolkit/
-          cp -r node_modules/prisma dist/prisma-toolkit/node_modules/
-          cp -r node_modules/@prisma dist/prisma-toolkit/node_modules/
-          cp -r node_modules/.prisma dist/prisma-toolkit/node_modules/
-          cp -r node_modules/dotenv dist/prisma-toolkit/node_modules/
+          # Whole node_modules, not a hand-picked subset -- prisma's CLI pulls
+          # in enough transitive deps (@prisma/config -> effect, etc.) that
+          # guessing which folders to copy turned into permanent whack-a-mole.
+          # This is the only reliably correct option short of re-resolving
+          # deps from scratch, and the artifact is one-time/deploy-only.
+          cp -r node_modules dist/prisma-toolkit/node_modules
 
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
