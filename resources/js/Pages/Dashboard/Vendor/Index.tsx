@@ -68,6 +68,7 @@ export default function VendorsPage() {
 
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectFilter, setProjectFilter] = useState('ALL');
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -124,6 +125,7 @@ export default function VendorsPage() {
           page,
           limit,
           search: searchTerm,
+          projectId: projectFilter !== 'ALL' ? projectFilter : undefined,
         }
       });
       if (res.data.status === 'success') {
@@ -153,7 +155,7 @@ export default function VendorsPage() {
   useEffect(() => {
     fetchVendors();
     fetchProjects();
-  }, [page, limit]);
+  }, [page, limit, projectFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -316,12 +318,27 @@ export default function VendorsPage() {
         </div>
 
         {/* Filter */}
-        <Input
-          placeholder="Search by company, vendor name or trade type..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          icon={<Search className="h-4 w-4" />}
-        />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by company, vendor name or trade type..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<Search className="h-4 w-4" />}
+            className="flex-1"
+          />
+          <Select
+            value={projectFilter}
+            onChange={(e) => { setProjectFilter(e.target.value); setPage(1); }}
+            className="sm:w-[260px]"
+          >
+            <option value="ALL" className="bg-slate-900 text-slate-200">All Projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                {p.code} - {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
 
         {/* Vendors registry grid */}
         {isFetching && vendors.length === 0 ? (
