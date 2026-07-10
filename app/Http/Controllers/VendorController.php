@@ -18,6 +18,7 @@ class VendorController extends Controller
     public function index(Request $request)
     {
         $search = $request->get('search', '');
+        $projectId = $request->get('projectId');
         $page = (int) $request->get('page', 1);
         $limit = (int) $request->get('limit', 10);
         $skip = ($page - 1) * $limit;
@@ -28,6 +29,11 @@ class VendorController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('companyName', 'like', "%{$search}%")
                     ->orWhere('workType', 'like', "%{$search}%");
+            });
+        }
+        if ($projectId) {
+            $query->whereHas('projectAssignments', function ($q) use ($projectId) {
+                $q->where('projectId', $projectId);
             });
         }
 
