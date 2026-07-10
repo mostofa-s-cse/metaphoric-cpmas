@@ -8,6 +8,7 @@ use App\Models\WebsiteTeam;
 use App\Models\WebsiteTrustBadge;
 use App\Models\WebsiteTestimonial;
 use App\Models\WebsiteFAQ;
+use App\Models\WebsiteSettings;
 use Illuminate\Database\Seeder;
 
 class WebsiteCmsSeeder extends Seeder
@@ -16,12 +17,29 @@ class WebsiteCmsSeeder extends Seeder
      * Seed the website CMS content (Services, Portfolio, Team, Trust Badges,
      * Testimonials, FAQs) ported from prisma/seed.ts.
      *
-     * Note: WebsiteSettings (BRAND_INFO) and WebsiteSection (HERO, ABOUT_FIRM)
-     * are intentionally NOT seeded here — WebsiteController::publicData()
-     * already seeds those on-the-fly the first time the public site loads.
+     * Note: WebsiteSection (HERO, ABOUT_FIRM) is intentionally NOT seeded here
+     * — WebsiteController::publicData() already seeds it on-the-fly the first
+     * time the public site loads.
      */
     public function run(): void
     {
+        // Brand Info (logo/favicon default to empty — set via Website Management
+        // → Branding Assets in the dashboard). firstOrCreate so re-running the
+        // seeder never clobbers an admin's already-uploaded logo.
+        WebsiteSettings::firstOrCreate(
+            ['key' => 'BRAND_INFO'],
+            ['value' => [
+                'name' => 'Metaphoric', 'nameAlt' => 'Metaphoric Architect',
+                'tagline' => 'Architect', 'city' => 'Dhaka, Bangladesh',
+                'logoUrl' => '', 'faviconUrl' => '',
+                'facebook' => 'https://www.facebook.com/metaphoricarchitect',
+                'instagram' => 'https://www.instagram.com/', 'email' => 'info@metaphoricarchitect.com',
+                'phone' => '+880 1XXX-XXXXXX', 'address' => 'Dhaka, Bangladesh',
+                'followers' => '15.8K', 'years' => '10+', 'projects' => '200+', 'satisfaction' => '98%',
+                'studioDesc' => 'Metaphoric Architect is a Dhaka-based multidisciplinary firm specializing in architecture, interior design, urban planning, construction management, and consulting. We craft spaces that blend timeless form with purposeful function.',
+            ]]
+        );
+
         // Services
         $serviceData = [
             ['title' => 'Architectural Design', 'description' => 'Innovative and sustainable architectural solutions for commercial and residential spaces.', 'imageUrl' => 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80', 'order' => 1],

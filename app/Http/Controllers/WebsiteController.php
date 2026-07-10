@@ -46,6 +46,7 @@ class WebsiteController extends Controller
             $defaultBrand = [
                 'name' => 'Metaphoric', 'nameAlt' => 'Metaphoric Architect',
                 'tagline' => 'Architect', 'city' => 'Dhaka, Bangladesh',
+                'logoUrl' => '', 'faviconUrl' => '',
                 'facebook' => 'https://www.facebook.com/metaphoricarchitect',
                 'instagram' => 'https://www.instagram.com/', 'email' => 'info@metaphoricarchitect.com',
                 'phone' => '+880 1XXX-XXXXXX', 'address' => 'Dhaka, Bangladesh',

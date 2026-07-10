@@ -16,6 +16,7 @@ class Salary extends Model
     protected $fillable = [
         'id',
         'employeeId',
+        'projectId',
         'month',
         'basicSalary',
         'bonus',
@@ -38,5 +39,10 @@ class Salary extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employeeId');
+    }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class, 'projectId');
     }
 }

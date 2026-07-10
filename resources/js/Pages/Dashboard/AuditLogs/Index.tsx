@@ -295,6 +295,7 @@ export default function AuditLogsPage() {
                   value={startDate}
                   onChange={handleStartDateChange}
                   className="bg-slate-950/40 border border-slate-800/80 rounded-xl px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-cyan-500/80 cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
                 />
                 <span className="text-[10px] text-slate-500 font-semibold uppercase">To</span>
                 <input
@@ -302,6 +303,7 @@ export default function AuditLogsPage() {
                   value={endDate}
                   onChange={handleEndDateChange}
                   className="bg-slate-950/40 border border-slate-800/80 rounded-xl px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-cyan-500/80 cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
                 />
               </div>
 

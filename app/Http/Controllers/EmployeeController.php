@@ -142,7 +142,10 @@ class EmployeeController extends Controller
     public function salaries(string $employeeId)
     {
         $employee = Employee::findOrFail($employeeId);
-        $salaries = Salary::where('employeeId', $employeeId)->orderBy('month', 'desc')->get();
+        $salaries = Salary::where('employeeId', $employeeId)
+            ->with('project:id,name,code')
+            ->orderBy('month', 'desc')
+            ->get();
         return $this->apiSuccess(['salaries' => $salaries, 'employee' => $employee],
             'Salaries retrieved successfully', self::PATH . '/salaries');
     }
@@ -153,6 +156,7 @@ class EmployeeController extends Controller
 
         $data = $request->validate([
             'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'projectId' => 'nullable|uuid|exists:projects,id',
             'basicSalary' => 'required|numeric|min:0',
             'bonus' => 'nullable|numeric|min:0',
             'deduction' => 'nullable|numeric|min:0',
@@ -186,6 +190,7 @@ class EmployeeController extends Controller
         ) {
             $salary = Salary::create([
                 'employeeId' => $employeeId,
+                'projectId' => $data['projectId'] ?? null,
                 'month' => $data['month'],
                 'basicSalary' => $basicSalary,
                 'bonus' => $bonus,
@@ -198,6 +203,7 @@ class EmployeeController extends Controller
 
             $cashOut = CashOut::create([
                 'date' => now(),
+                'projectId' => $data['projectId'] ?? null,
                 'expenseCategory' => 'EMPLOYEE_SALARY',
                 'paidTo' => $employee->fullName,
                 'amount' => $paidAmount,
@@ -211,7 +217,7 @@ class EmployeeController extends Controller
             return [$salary, $cashOut];
         });
 
-        return $this->apiCreated(['salary' => $salary, 'cashOut' => $cashOut],
+        return $this->apiCreated(['salary' => $salary->load('project:id,name,code'), 'cashOut' => $cashOut],
             'Salary processed successfully', self::PATH . '/salaries');
     }
 

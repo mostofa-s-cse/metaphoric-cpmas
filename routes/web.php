@@ -69,6 +69,7 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
     Route::get('/suppliers', [SupplierController::class, 'page'])->name('dashboard.suppliers');
     Route::get('/vendor', [VendorController::class, 'page'])->name('dashboard.vendors');
     Route::get('/employees', [EmployeeController::class, 'page'])->name('dashboard.employees');
+    Route::get('/labour', [LabourController::class, 'page'])->name('dashboard.labour');
     Route::get('/materials', [MaterialController::class, 'page'])->name('dashboard.materials');
     Route::get('/transactions', [TransactionController::class, 'page'])->name('dashboard.transactions');
     Route::get('/documents', [DocumentController::class, 'page'])->name('dashboard.documents');

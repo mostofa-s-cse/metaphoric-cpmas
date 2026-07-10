@@ -8,6 +8,7 @@ import { z } from 'zod';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { DatePickerInput } from '@/Components/ui/DatePickerInput';
 import { Modal } from '@/Components/ui/Modal';
+import { Drawer } from '@/Components/ui/Drawer';
 import { AlertDialog } from '@/Components/ui/AlertDialog';
 import { Pagination } from '@/Components/ui/Pagination';
 import { Button } from '@/Components/ui/Button';
@@ -17,8 +18,8 @@ import { ToastContainer } from '@/Components/ui/ToastContainer';
 import { useToast } from '@/hooks/useToast';
 
 import {
-  Users2, Plus, Search, Phone, Mail, UserCheck, Building, DollarSign, Calendar, X, Check,
-  AlertCircle, Loader2, CalendarCheck, UserPlus, UserX, CreditCard, NotebookTabs, Trash2
+  Users2, Plus, Search, Building, DollarSign, X, Loader2, UserPlus, CreditCard, Trash2, Edit2,
+  History, Wallet, Receipt,
 } from 'lucide-react';
 
 const employeeStatusEnum = z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']);
@@ -36,19 +37,7 @@ const employeeSchema = z.object({
   employmentStatus: employeeStatusEnum,
 });
 
-const labourSchema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  phoneNumber: z.string().min(5, 'Phone number is required'),
-  trade: z.string().min(2, 'Trade is required'),
-  dailyWage: z.string().refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) > 0, {
-    message: 'Daily wage must be a positive number',
-  }),
-  projectId: z.string().min(1, 'Project assignment is required'),
-  employmentStatus: z.enum(['ACTIVE', 'INACTIVE']),
-});
-
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
-type LabourFormValues = z.infer<typeof labourSchema>;
 
 interface ApiEmployee {
   id: string;
@@ -61,68 +50,75 @@ interface ApiEmployee {
   joiningDate: string;
   monthlySalary: number;
   employmentStatus: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  salaries?: any[];
 }
 
-interface ApiLabour {
-  id: string;
-  name: string;
-  phoneNumber: string;
-  trade: string;
-  dailyWage: number;
-  projectId: string;
-  employmentStatus: 'ACTIVE' | 'INACTIVE';
-  project?: {
-    id: string;
-    name: string;
-    code: string;
-  };
-}
+// Expense categories treated as general "office" overhead — these (plus
+// employee salaries) are what draw down a project's Main Balance.
+const OFFICE_EXPENSE_CATEGORIES = [
+  { key: 'OFFICE_RENT', label: 'Office Rent' },
+  { key: 'UTILITIES', label: 'Electricity & Internet Utilities' },
+  { key: 'TRANSPORTATION', label: 'Transportation' },
+  { key: 'FUEL', label: 'Fuel' },
+  { key: 'EQUIPMENT_RENTAL', label: 'Heavy Crane/Equipment Rental' },
+  { key: 'MISCELLANEOUS', label: 'Miscellaneous / Petty Cash' },
+];
+const OFFICE_CATEGORY_KEYS = OFFICE_EXPENSE_CATEGORIES.map((c) => c.key);
 
 export default function EmployeesPage() {
   const { auth } = usePage().props as any;
   const user = auth?.user;
   const { toasts, removeToast, success, error, handlePromise } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'employees' | 'labour' | 'attendance'>('employees');
+  const [activeTab, setActiveTab] = useState<'expense' | 'employees' | 'salary'>('employees');
+  const [salaryMonthFilter, setSalaryMonthFilter] = useState(''); // '' = all months
 
   // Database lists
   const [employees, setEmployees] = useState<ApiEmployee[]>([]);
-  const [labours, setLabours] = useState<ApiLabour[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
 
   // Loading/fetching states
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(true);
-  const [isFetchingLabours, setIsFetchingLabours] = useState(true);
   const [fetchError, setFetchError] = useState(false);
 
   // Search states
   const [searchEmployee, setSearchEmployee] = useState('');
-  const [searchLabour, setSearchLabour] = useState('');
 
   // Pagination states
   const [empPage, setEmpPage] = useState(1);
   const [empLimit, setEmpLimit] = useState(10);
   const [empTotal, setEmpTotal] = useState(0);
 
-  const [labPage, setLabPage] = useState(1);
-  const [labLimit, setLabLimit] = useState(10);
-  const [labTotal, setLabTotal] = useState(0);
-
-  // Attendance logging states
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'>>({});
-  const [isFetchingAttendance, setIsFetchingAttendance] = useState(false);
-  const [isSavingAttendance, setIsSavingAttendance] = useState(false);
-
   // Modals state
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
-  const [isLabourModalOpen, setIsLabourModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [employeeModalMode, setEmployeeModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
+  const [isSalaryHistoryOpen, setIsSalaryHistoryOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<ApiEmployee | null>(null);
+
+  // Full (unpaginated) employee list — used by the Employee Salary tab (totals
+  // per employee) and by the Main Balance calculation (every employee's spend
+  // against a project), since the paginated `employees` list may not include
+  // everyone.
+  const [allEmployees, setAllEmployees] = useState<ApiEmployee[]>([]);
+  const [isFetchingAllEmployees, setIsFetchingAllEmployees] = useState(true);
+
+  // Every cash-out, fetched in full so the Expense tab's ledger (office
+  // categories only) and the global Main Balance calculation (office +
+  // labour-wage categories) both have everything on hand.
+  const [allCashOuts, setAllCashOuts] = useState<any[]>([]);
+  const [isFetchingCashOuts, setIsFetchingCashOuts] = useState(true);
+  const officeCashOuts = allCashOuts.filter((co: any) => OFFICE_CATEGORY_KEYS.includes(co.expenseCategory));
+
+  // Pay Salary modal: payment history
+  const [salaryHistory, setSalaryHistory] = useState<any[]>([]);
+  const [isFetchingSalaryHistory, setIsFetchingSalaryHistory] = useState(false);
 
   // Delete state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [personToDelete, setPersonToDelete] = useState<{ id: string; type: 'employee' | 'labour' } | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
 
   // Salary disbursement manual form state
   const [salaryFormData, setSalaryFormData] = useState({
@@ -136,9 +132,21 @@ export default function EmployeesPage() {
     notes: '',
   });
 
+  // Office expense form state
+  const [expenseFormData, setExpenseFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    projectId: '',
+    expenseCategory: 'OFFICE_RENT',
+    paidTo: '',
+    amount: '',
+    paymentMethod: 'BANK',
+    referenceNumber: '',
+    notes: '',
+  });
+
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
-  const [isCreatingLabour, setIsCreatingLabour] = useState(false);
   const [isProcessingSalary, setIsProcessingSalary] = useState(false);
+  const [isLoggingExpense, setIsLoggingExpense] = useState(false);
 
   // React Hook Form for Employee
   const {
@@ -163,25 +171,6 @@ export default function EmployeesPage() {
     mode: 'all',
   });
 
-  // React Hook Form for Labour
-  const {
-    register: registerLabour,
-    handleSubmit: handleSubmitLabour,
-    reset: resetLabour,
-    formState: { errors: labourErrors },
-  } = useForm<LabourFormValues>({
-    resolver: zodResolver(labourSchema),
-    defaultValues: {
-      name: '',
-      phoneNumber: '',
-      trade: 'Mason',
-      dailyWage: '',
-      projectId: '',
-      employmentStatus: 'ACTIVE',
-    },
-    mode: 'all',
-  });
-
   const fetchEmployees = async () => {
     setIsFetchingEmployees(true);
     try {
@@ -199,20 +188,31 @@ export default function EmployeesPage() {
     }
   };
 
-  const fetchLabours = async () => {
-    setIsFetchingLabours(true);
+  const fetchAllEmployees = async () => {
+    setIsFetchingAllEmployees(true);
     try {
-      const res = await axios.get('/api/labours', {
-        params: { page: labPage, limit: labLimit, search: searchLabour }
-      });
+      const res = await axios.get('/api/employees', { params: { limit: 1000 } });
       if (res.data.status === 'success') {
-        setLabours(res.data.data.labours || []);
-        setLabTotal(res.data.data.total || 0);
+        setAllEmployees(res.data.data.employees || []);
       }
     } catch (err) {
-      setFetchError(true);
+      // silent
     } finally {
-      setIsFetchingLabours(false);
+      setIsFetchingAllEmployees(false);
+    }
+  };
+
+  const fetchOfficeCashOuts = async () => {
+    setIsFetchingCashOuts(true);
+    try {
+      const res = await axios.get('/api/transactions/cash-out', { params: { limit: 1000 } });
+      if (res.data.status === 'success') {
+        setAllCashOuts(res.data.data.cashOuts || []);
+      }
+    } catch (err) {
+      // silent
+    } finally {
+      setIsFetchingCashOuts(false);
     }
   };
 
@@ -224,31 +224,6 @@ export default function EmployeesPage() {
       }
     } catch (err) {
       // silent fail
-    }
-  };
-
-  const fetchAttendance = async () => {
-    if (activeTab !== 'attendance') return;
-    setIsFetchingAttendance(true);
-    try {
-      const res = await axios.get('/api/attendance', { params: { date: selectedDate } });
-      const fetchedRecords = res.data.data?.attendances || [];
-      const records: Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'> = {};
-      fetchedRecords.forEach((att: any) => {
-        records[att.labourId] = att.status;
-      });
-
-      // Default remaining active workers to PRESENT
-      labours.forEach((l) => {
-        if (!records[l.id] && l.employmentStatus === 'ACTIVE') {
-          records[l.id] = 'PRESENT';
-        }
-      });
-      setAttendanceRecords(records);
-    } catch (err) {
-      // silent
-    } finally {
-      setIsFetchingAttendance(false);
     }
   };
 
@@ -265,23 +240,14 @@ export default function EmployeesPage() {
   }, [searchEmployee]);
 
   useEffect(() => {
-    fetchLabours();
     fetchProjects();
-  }, [labPage, labLimit]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLabPage(1);
-      fetchLabours();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchLabour]);
-
-  useEffect(() => {
-    fetchAttendance();
-  }, [selectedDate, activeTab, labours]);
+    fetchAllEmployees();
+    fetchOfficeCashOuts();
+  }, []);
 
   const handleOpenEmployeeCreate = () => {
+    setEmployeeModalMode('create');
+    setSelectedEmployeeId(null);
     resetEmployee({
       employeeId: '',
       fullName: '',
@@ -296,32 +262,38 @@ export default function EmployeesPage() {
     setIsEmployeeModalOpen(true);
   };
 
-  const handleOpenLabourCreate = () => {
-    if (projects.length === 0) {
-      error('Please create a project first before registering site labor.');
-      return;
-    }
-    resetLabour({
-      name: '',
-      phoneNumber: '',
-      trade: 'Mason',
-      dailyWage: '',
-      projectId: projects[0].id,
-      employmentStatus: 'ACTIVE',
+  const handleOpenEmployeeEdit = (emp: ApiEmployee) => {
+    setEmployeeModalMode('edit');
+    setSelectedEmployeeId(emp.id);
+    resetEmployee({
+      employeeId: emp.employeeId,
+      fullName: emp.fullName,
+      designation: emp.designation,
+      department: emp.department,
+      phoneNumber: emp.phoneNumber,
+      email: emp.email || '',
+      joiningDate: emp.joiningDate.split('T')[0],
+      monthlySalary: emp.monthlySalary.toString(),
+      employmentStatus: emp.employmentStatus,
     });
-    setIsLabourModalOpen(true);
+    setIsEmployeeModalOpen(true);
   };
 
   const onEmployeeSubmit = async (values: EmployeeFormValues) => {
     setIsCreatingEmployee(true);
     try {
-      await handlePromise(axios.post('/api/employees', {
-        ...values,
-        monthlySalary: parseFloat(values.monthlySalary),
-      }), {
-        successMessage: 'Employee created successfully'
-      });
+      const payload = { ...values, monthlySalary: parseFloat(values.monthlySalary) };
+      if (employeeModalMode === 'create') {
+        await handlePromise(axios.post('/api/employees', payload), {
+          successMessage: 'Employee created successfully'
+        });
+      } else if (selectedEmployeeId) {
+        await handlePromise(axios.patch(`/api/employees/${selectedEmployeeId}`, payload), {
+          successMessage: 'Employee updated successfully'
+        });
+      }
       fetchEmployees();
+      fetchAllEmployees();
       setIsEmployeeModalOpen(false);
     } catch (err) {
       // handled
@@ -330,47 +302,37 @@ export default function EmployeesPage() {
     }
   };
 
-  const onLabourSubmit = async (values: LabourFormValues) => {
-    setIsCreatingLabour(true);
-    try {
-      await handlePromise(axios.post('/api/labours', {
-        ...values,
-        dailyWage: parseFloat(values.dailyWage),
-      }), {
-        successMessage: 'Worker registered successfully'
-      });
-      fetchLabours();
-      setIsLabourModalOpen(false);
-    } catch (err) {
-      // handled
-    } finally {
-      setIsCreatingLabour(false);
-    }
-  };
-
-  const handleDeleteClick = (id: string, type: 'employee' | 'labour') => {
-    setPersonToDelete({ id, type });
+  const handleDeleteClick = (id: string) => {
+    setEmployeeToDelete(id);
     setDeleteConfirmOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (!personToDelete) return;
+    if (!employeeToDelete) return;
     try {
-      if (personToDelete.type === 'employee') {
-        await handlePromise(axios.delete(`/api/employees/${personToDelete.id}`), {
-          successMessage: 'Employee deleted successfully'
-        });
-        fetchEmployees();
-      } else {
-        await handlePromise(axios.delete(`/api/labours/${personToDelete.id}`), {
-          successMessage: 'Labour record deleted successfully'
-        });
-        fetchLabours();
-      }
+      await handlePromise(axios.delete(`/api/employees/${employeeToDelete}`), {
+        successMessage: 'Employee deleted successfully'
+      });
+      fetchEmployees();
+      fetchAllEmployees();
       setDeleteConfirmOpen(false);
-      setPersonToDelete(null);
+      setEmployeeToDelete(null);
     } catch (err) {
       // handled
+    }
+  };
+
+  const fetchSalaryHistory = async (employeeId: string) => {
+    setIsFetchingSalaryHistory(true);
+    try {
+      const res = await axios.get(`/api/employees/${employeeId}/salaries`);
+      if (res.data.status === 'success') {
+        setSalaryHistory(res.data.data.salaries || []);
+      }
+    } catch (err) {
+      // silent
+    } finally {
+      setIsFetchingSalaryHistory(false);
     }
   };
 
@@ -388,6 +350,32 @@ export default function EmployeesPage() {
     });
     setIsSalaryModalOpen(true);
   };
+
+  const handleViewSalaryHistory = (emp: ApiEmployee) => {
+    setSelectedEmployee(emp);
+    fetchSalaryHistory(emp.id);
+    setIsSalaryHistoryOpen(true);
+  };
+
+  // Main Balance = 30% of the combined estimated budget across EVERY project —
+  // one shared, company-wide pool (not per-project). Employee salaries,
+  // office expenses, and labour wages all draw down this same balance,
+  // regardless of which project each payment is attributed to.
+  const getMainBalance = () => {
+    const mainBalance = projects.reduce((sum: number, p: any) => sum + (p.estimatedBudget || 0), 0) * 0.3;
+    const spentSalary = allEmployees.reduce((sum: number, e: any) => {
+      const empSpent = (e.salaries || []).reduce((s: number, sal: any) => s + (sal.paidAmount || 0), 0);
+      return sum + empSpent;
+    }, 0);
+    const spentExpense = officeCashOuts.reduce((s: number, co: any) => s + (co.amount || 0), 0);
+    const spentLabourWages = allCashOuts
+      .filter((co: any) => co.expenseCategory === 'LABOR')
+      .reduce((s: number, co: any) => s + (co.amount || 0), 0);
+    const spent = spentSalary + spentExpense + spentLabourWages;
+    return { mainBalance, spentSalary, spentExpense, spentLabourWages, spent, remaining: mainBalance - spent };
+  };
+
+  const mainBalanceInfo = getMainBalance();
 
   const handleDisburseSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -415,6 +403,8 @@ export default function EmployeesPage() {
           successMessage: `Successfully logged salary disbursement of ${formatCurrencyLocal(paid)} for ${selectedEmployee.fullName}`
         }
       );
+      fetchSalaryHistory(selectedEmployee.id);
+      fetchAllEmployees();
       setIsSalaryModalOpen(false);
     } catch (err) {
       // handled
@@ -423,51 +413,80 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleSaveAttendance = async () => {
-    setIsSavingAttendance(true);
-    const recordsArray = Object.entries(attendanceRecords).map(([labourId, status]) => {
-      const worker = labours.find((l) => l.id === labourId);
-      return {
-        labourId,
-        status,
-        projectId: worker?.projectId,
-      };
-    });
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!expenseFormData.projectId) {
+      error('Select the project this expense is being paid from');
+      return;
+    }
+    const amount = parseFloat(expenseFormData.amount) || 0;
+    if (amount <= 0) {
+      error('Enter a valid expense amount');
+      return;
+    }
 
+    setIsLoggingExpense(true);
     try {
       await handlePromise(
-        axios.post('/api/attendance', {
-          date: selectedDate,
-          records: recordsArray,
+        axios.post('/api/transactions/cash-out', {
+          date: expenseFormData.date,
+          projectId: expenseFormData.projectId,
+          expenseCategory: expenseFormData.expenseCategory,
+          paidTo: expenseFormData.paidTo || OFFICE_EXPENSE_CATEGORIES.find((c) => c.key === expenseFormData.expenseCategory)?.label,
+          amount,
+          paymentMethod: expenseFormData.paymentMethod,
+          referenceNumber: expenseFormData.referenceNumber,
+          notes: expenseFormData.notes,
         }),
-        {
-          successMessage: 'Labor attendance logs saved successfully'
-        }
+        { successMessage: `Successfully logged office expense of ${formatCurrencyLocal(amount)}` }
       );
-      fetchAttendance();
+      fetchOfficeCashOuts();
+      setExpenseFormData({
+        date: new Date().toISOString().split('T')[0],
+        projectId: expenseFormData.projectId,
+        expenseCategory: 'OFFICE_RENT',
+        paidTo: '',
+        amount: '',
+        paymentMethod: 'BANK',
+        referenceNumber: '',
+        notes: '',
+      });
+      setIsExpenseModalOpen(false);
     } catch (err) {
       // handled
     } finally {
-      setIsSavingAttendance(false);
+      setIsLoggingExpense(false);
     }
-  };
-
-  const toggleAttendanceStatus = (labourId: string, status: 'PRESENT' | 'ABSENT' | 'LEAVE') => {
-    setAttendanceRecords((prev) => ({
-      ...prev,
-      [labourId]: status,
-    }));
   };
 
   const formatCurrencyLocal = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  const isFetching = isFetchingEmployees || isFetchingLabours;
+  const BalanceWidget = ({ info }: { info: ReturnType<typeof getMainBalance> }) => {
+    return (
+      <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
+        <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
+          <span className="text-slate-550 block text-[9px] uppercase">Main Balance (All Projects)</span>
+          <span className="text-slate-200 font-bold">{formatCurrencyLocal(info.mainBalance)}</span>
+        </div>
+        <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
+          <span className="text-slate-550 block text-[9px] uppercase">Spent</span>
+          <span className="text-rose-400 font-bold">{formatCurrencyLocal(info.spent)}</span>
+        </div>
+        <div className="p-1.5 bg-slate-950/40 border border-cyan-500/20 rounded-lg">
+          <span className="text-slate-550 block text-[9px] uppercase">Remaining</span>
+          <span className={`font-bold ${info.remaining >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+            {formatCurrencyLocal(info.remaining)}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <AuthenticatedLayout>
-      <Head title="Workforce Management" />
+      <Head title="Office Management" />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <div className="space-y-6">
@@ -476,38 +495,43 @@ export default function EmployeesPage() {
           <div>
             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-350 flex items-center gap-2">
               <Users2 className="h-5.5 w-5.5 text-cyan-400" />
-              Workforce Management
+              Office Management
             </h1>
             <p className="text-slate-500 text-xs mt-0.5">
-              Register engineers, staff and site labor, log daily attendance sheets, and disburse monthly salaries.
+              Log office expenses, register staff, and disburse monthly salaries — all reconciled against each project's Main Balance.
             </p>
           </div>
 
-          {/* Tab-specific actions */}
-          {user && user.role !== 'DATA_ENTRY_OPERATOR' && (
-            <div className="flex gap-2">
-              {activeTab === 'employees' && (
-                <Button
-                  onClick={handleOpenEmployeeCreate}
-                  icon={<UserPlus className="h-4.5 w-4.5" />}
-                >
-                  Register Employee
-                </Button>
-              )}
-              {activeTab === 'labour' && (
-                <Button
-                  onClick={handleOpenLabourCreate}
-                  icon={<UserPlus className="h-4.5 w-4.5" />}
-                >
-                  Register Labour
-                </Button>
-              )}
-            </div>
+          {user && user.role !== 'DATA_ENTRY_OPERATOR' && activeTab === 'employees' && (
+            <Button
+              onClick={handleOpenEmployeeCreate}
+              icon={<UserPlus className="h-4.5 w-4.5" />}
+            >
+              Register Employee
+            </Button>
+          )}
+          {user && user.role !== 'DATA_ENTRY_OPERATOR' && activeTab === 'expense' && (
+            <Button
+              onClick={() => setIsExpenseModalOpen(true)}
+              icon={<Receipt className="h-4.5 w-4.5" />}
+            >
+              Log Expense
+            </Button>
           )}
         </div>
 
         {/* Tabs */}
         <div className="flex border-b border-slate-800 gap-4">
+          <button
+            onClick={() => setActiveTab('expense')}
+            className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+              activeTab === 'expense'
+                ? 'border-cyan-500 text-cyan-400'
+                : 'border-transparent text-slate-500 hover:text-slate-350'
+            }`}
+          >
+            Expense
+          </button>
           <button
             onClick={() => setActiveTab('employees')}
             className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
@@ -516,31 +540,73 @@ export default function EmployeesPage() {
                 : 'border-transparent text-slate-500 hover:text-slate-350'
             }`}
           >
-            Employees &amp; Engineers ({employees.length})
+            Employees ({employees.length})
           </button>
           <button
-            onClick={() => setActiveTab('labour')}
+            onClick={() => setActiveTab('salary')}
             className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-              activeTab === 'labour'
+              activeTab === 'salary'
                 ? 'border-cyan-500 text-cyan-400'
                 : 'border-transparent text-slate-500 hover:text-slate-350'
             }`}
           >
-            Labour Registry ({labours.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-              activeTab === 'attendance'
-                ? 'border-cyan-500 text-cyan-400'
-                : 'border-transparent text-slate-500 hover:text-slate-350'
-            }`}
-          >
-            Daily Labor Attendance
+            Employee Salary
           </button>
         </div>
 
-        {/* Tab 1: Employees */}
+        {/* Tab: Expense */}
+        {activeTab === 'expense' && (
+          <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl p-6">
+              <h2 className="text-slate-200 text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Wallet className="h-4.5 w-4.5 text-cyan-400" />
+                Office Expense Ledger
+              </h2>
+              {isFetchingCashOuts ? (
+                <div className="h-40 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+                </div>
+              ) : officeCashOuts.length === 0 ? (
+                <p className="text-slate-500 text-xs italic">No office expenses logged yet.</p>
+              ) : (
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-[10px] text-slate-500 uppercase tracking-widest">
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Category</th>
+                        <th className="py-2.5 px-3">Paid To</th>
+                        <th className="py-2.5 px-3">Project</th>
+                        <th className="py-2.5 px-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {[...officeCashOuts]
+                        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((co: any) => (
+                          <tr key={co.id} className="hover:bg-slate-900/30 transition-colors">
+                            <td className="py-3 px-3 text-slate-450 font-mono text-[10px]">
+                              {new Date(co.date).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-cyan-400 font-bold uppercase font-mono">
+                                {co.expenseCategory.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-slate-300 font-semibold">{co.paidTo}</td>
+                            <td className="py-3 px-3 text-slate-400">{co.project?.code || '—'}</td>
+                            <td className="py-3 px-3 text-right font-bold text-rose-400">
+                              -{formatCurrencyLocal(co.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* Tab: Employees */}
         {activeTab === 'employees' && (
           <div className="space-y-4">
             <Input
@@ -576,8 +642,8 @@ export default function EmployeesPage() {
                         <th className="p-4">Department</th>
                         <th className="p-4">Joining Date</th>
                         <th className="p-4 text-right">Monthly Salary</th>
-                        <th className="p-4 text-center">Salaries</th>
-                        {user?.role === 'SUPER_ADMIN' && <th className="p-4 text-right">Delete</th>}
+                        <th className="p-4 text-center">Status</th>
+                        {user && ['SUPER_ADMIN', 'ADMIN'].includes(user.role) && <th className="p-4 text-right">Actions</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
@@ -592,26 +658,36 @@ export default function EmployeesPage() {
                             {formatCurrencyLocal(emp.monthlySalary)}
                           </td>
                           <td className="p-4 text-center">
-                            {user && ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'].includes(user.role) ? (
-                              <button
-                                onClick={() => handleOpenSalaryDisburse(emp)}
-                                className="px-2.5 py-1.5 bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-slate-300 font-bold rounded-lg text-[10px] transition-all cursor-pointer shadow flex items-center gap-1 mx-auto"
-                              >
-                                <CreditCard className="h-3 w-3" />
-                                <span>Pay Salary</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-550 italic">No access</span>
-                            )}
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${
+                                emp.employmentStatus === 'ACTIVE'
+                                  ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                                  : 'text-slate-400 border-slate-500/20 bg-slate-500/5'
+                              }`}
+                            >
+                              {emp.employmentStatus}
+                            </span>
                           </td>
-                          {user?.role === 'SUPER_ADMIN' && (
+                          {user && ['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
                             <td className="p-4 text-right">
-                              <button
-                                onClick={() => handleDeleteClick(emp.id, 'employee')}
-                                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer animate-in duration-200"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleOpenEmployeeEdit(emp)}
+                                  className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
+                                  title="Edit employee"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                {user.role === 'SUPER_ADMIN' && (
+                                  <button
+                                    onClick={() => handleDeleteClick(emp.id)}
+                                    className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer animate-in duration-200"
+                                    title="Delete employee"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           )}
                         </tr>
@@ -632,29 +708,36 @@ export default function EmployeesPage() {
           </div>
         )}
 
-        {/* Tab 2: Labour */}
-        {activeTab === 'labour' && (
+        {/* Tab: Employee Salary */}
+        {activeTab === 'salary' && (
           <div className="space-y-4">
-            <Input
-              placeholder="Search by worker name or trade craft..."
-              value={searchLabour}
-              onChange={(e) => setSearchLabour(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
-            />
+            <div className="flex items-center gap-3">
+              <div className="w-56">
+                <label className="block text-slate-450 text-[10px] font-semibold mb-1.5 uppercase">Filter by Month</label>
+                <Input
+                  type="month"
+                  value={salaryMonthFilter}
+                  onChange={(e) => setSalaryMonthFilter(e.target.value)}
+                />
+              </div>
+              {salaryMonthFilter && (
+                <button
+                  onClick={() => setSalaryMonthFilter('')}
+                  className="mt-5 px-3 py-2 text-[10px] font-bold text-slate-400 hover:text-cyan-400 border border-slate-800 rounded-lg hover:border-cyan-500/30 transition-all cursor-pointer"
+                >
+                  All Months
+                </button>
+              )}
+            </div>
 
-            {isFetchingLabours && labours.length === 0 ? (
+            {isFetchingAllEmployees && allEmployees.length === 0 ? (
               <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10">
                 <Loader2 className="h-7 w-7 animate-spin text-cyan-400 mb-2" />
-                <span className="text-slate-500 text-xs">Loading labor logs...</span>
+                <span className="text-slate-500 text-xs">Loading payroll data...</span>
               </div>
-            ) : fetchError ? (
-              <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10 text-center px-4">
-                <Users2 className="h-10 w-10 text-rose-500 mb-2" />
-                <span className="text-slate-355 text-xs font-semibold">Failed to fetch labors registry</span>
-              </div>
-            ) : labours.length === 0 ? (
+            ) : allEmployees.length === 0 ? (
               <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10 text-center px-4 text-slate-500 text-xs">
-                No workers registered in labour registry.
+                No employees registered.
               </div>
             ) : (
               <div className="border border-slate-800/80 rounded-2xl overflow-hidden bg-slate-900/20 backdrop-blur-md">
@@ -662,178 +745,62 @@ export default function EmployeesPage() {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-950/40 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                        <th className="p-4">Name</th>
-                        <th className="p-4">Assigned Project</th>
-                        <th className="p-4">Trade Craft</th>
-                        <th className="p-4">Phone Number</th>
-                        <th className="p-4 text-right">Daily Wage</th>
-                        <th className="p-4 text-center">Status</th>
-                        {user?.role === 'SUPER_ADMIN' && <th className="p-4 text-right">Delete</th>}
+                        <th className="p-4">Employee</th>
+                        <th className="p-4 text-right">Monthly Salary</th>
+                        <th className="p-4 text-right">{salaryMonthFilter ? 'Paid (Month)' : 'Total Paid'}</th>
+                        <th className="p-4 text-right">{salaryMonthFilter ? 'Due (Month)' : 'Total Due'}</th>
+                        {user && ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'].includes(user.role) && (
+                          <th className="p-4 text-right">Action</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
-                      {labours.map((lab) => (
-                        <tr key={lab.id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="p-4 font-semibold text-slate-200">{lab.name}</td>
-                          <td className="p-4">
-                            <span className="font-semibold text-slate-300 block">{lab.project?.name}</span>
-                            <span className="text-[10px] font-mono text-cyan-400 block mt-0.5">
-                              {lab.project?.code}
-                            </span>
-                          </td>
-                          <td className="p-4 font-semibold text-slate-300">{lab.trade}</td>
-                          <td className="p-4 text-slate-400">{lab.phoneNumber}</td>
-                          <td className="p-4 text-right font-bold text-slate-200">
-                            {formatCurrencyLocal(lab.dailyWage)}/day
-                          </td>
-                          <td className="p-4 text-center">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${
-                                lab.employmentStatus === 'ACTIVE'
-                                  ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-                                  : 'text-slate-400 border-slate-500/20 bg-slate-500/5'
-                              }`}
-                            >
-                              {lab.employmentStatus}
-                            </span>
-                          </td>
-                          {user?.role === 'SUPER_ADMIN' && (
-                            <td className="p-4 text-right">
-                              <button
-                                onClick={() => handleDeleteClick(lab.id, 'labour')}
-                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer animate-in duration-200"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  currentPage={labPage}
-                  totalPages={Math.ceil(labTotal / labLimit)}
-                  totalItems={labTotal}
-                  limit={labLimit}
-                  onPageChange={setLabPage}
-                  onLimitChange={(l) => { setLabLimit(l); setLabPage(1); }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Daily Attendance */}
-        {activeTab === 'attendance' && (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/50 p-4 border border-slate-800 rounded-xl">
-              <div className="flex items-center gap-2">
-                <CalendarCheck className="h-5 w-5 text-cyan-400" />
-                <div>
-                  <h3 className="text-xs font-bold text-slate-200">Daily labor attendance log sheet</h3>
-                  <p className="text-[10px] text-slate-500">Record check-ins to run payroll billing</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <DatePickerInput
-                  id="attendanceDate"
-                  value={selectedDate}
-                  onChange={setSelectedDate}
-                />
-                {user && user.role !== 'DATA_ENTRY_OPERATOR' && (
-                  <button
-                    onClick={handleSaveAttendance}
-                    disabled={isSavingAttendance || labours.length === 0}
-                    className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold rounded-xl active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSavingAttendance && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    <span>Save Attendance</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {isFetchingAttendance ? (
-              <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10">
-                <Loader2 className="h-7 w-7 animate-spin text-cyan-400 mb-2" />
-                <span className="text-slate-500 text-xs">Loading attendance log sheet...</span>
-              </div>
-            ) : labours.length === 0 ? (
-              <div className="h-60 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center bg-slate-900/10 text-center px-4 text-slate-500 text-xs">
-                No active labour force registered.
-              </div>
-            ) : (
-              <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/20 backdrop-blur-md">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      <th className="p-4">Worker Name</th>
-                      <th className="p-4">Assigned Project</th>
-                      <th className="p-4">Craft Type</th>
-                      <th className="p-4 text-center">Attendance Logs status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {labours
-                      .filter((l) => l.employmentStatus === 'ACTIVE')
-                      .map((l) => {
-                        const currentStatus = attendanceRecords[l.id] || 'PRESENT';
+                      {allEmployees.map((emp: any) => {
+                        const salaries = (emp.salaries || []).filter((s: any) => !salaryMonthFilter || s.month === salaryMonthFilter);
+                        const totalPaid = salaries.reduce((s: number, sal: any) => s + (sal.paidAmount || 0), 0);
+                        const totalDue = salaries.reduce((s: number, sal: any) => s + (sal.dueAmount || 0), 0);
+                        const notProcessed = salaryMonthFilter && salaries.length === 0;
                         return (
-                          <tr key={l.id} className="hover:bg-slate-800/20 transition-colors">
-                            <td className="p-4 font-semibold text-slate-200">{l.name}</td>
-                            <td className="p-4 text-slate-400">{l.project?.name}</td>
-                            <td className="p-4 text-cyan-400 font-mono">{l.trade}</td>
+                          <tr key={emp.id} className="hover:bg-slate-800/20 transition-colors">
                             <td className="p-4">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  disabled={user?.role === 'DATA_ENTRY_OPERATOR'}
-                                  onClick={() => toggleAttendanceStatus(l.id, 'PRESENT')}
-                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                    currentStatus === 'PRESENT'
-                                      ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20'
-                                      : 'bg-transparent text-slate-600 hover:text-slate-400 border border-transparent'
-                                  }`}
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                  <span>PRESENT</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={user?.role === 'DATA_ENTRY_OPERATOR'}
-                                  onClick={() => toggleAttendanceStatus(l.id, 'ABSENT')}
-                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                    currentStatus === 'ABSENT'
-                                      ? 'bg-rose-500/10 text-rose-455 border border-rose-500/20'
-                                      : 'bg-transparent text-slate-600 hover:text-slate-400 border border-transparent'
-                                  }`}
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                  <span>ABSENT</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={user?.role === 'DATA_ENTRY_OPERATOR'}
-                                  onClick={() => toggleAttendanceStatus(l.id, 'LEAVE')}
-                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                    currentStatus === 'LEAVE'
-                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                      : 'bg-transparent text-slate-600 hover:text-slate-400 border border-transparent'
-                                  }`}
-                                >
-                                  <AlertCircle className="h-3.5 w-3.5" />
-                                  <span>LEAVE</span>
-                                </button>
-                              </div>
+                              <p className="font-semibold text-slate-200">{emp.fullName}</p>
+                              <p className="text-[10px] text-slate-500 mt-0.5">{emp.designation}</p>
                             </td>
+                            <td className="p-4 text-right font-bold text-slate-200">
+                              {formatCurrencyLocal(emp.monthlySalary)}
+                            </td>
+                            <td className="p-4 text-right font-bold text-emerald-400">
+                              {notProcessed ? <span className="text-slate-600 italic font-normal">Not processed</span> : formatCurrencyLocal(totalPaid)}
+                            </td>
+                            <td className={`p-4 text-right font-bold ${totalDue > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                              {notProcessed ? '—' : formatCurrencyLocal(totalDue)}
+                            </td>
+                            {user && ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'].includes(user.role) && (
+                              <td className="p-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => handleViewSalaryHistory(emp)}
+                                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg text-[10px] transition-all cursor-pointer shadow inline-flex items-center gap-1"
+                                  >
+                                    <History className="h-3 w-3" />
+                                    <span>Payment History</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenSalaryDisburse(emp)}
+                                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-slate-300 font-bold rounded-lg text-[10px] transition-all cursor-pointer shadow inline-flex items-center gap-1"
+                                  >
+                                    <CreditCard className="h-3 w-3" />
+                                    <span>Pay Salary</span>
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -846,7 +813,7 @@ export default function EmployeesPage() {
           title={
             <div className="flex items-center gap-2">
               <Building className="h-4.5 w-4.5 text-cyan-400" />
-              Register Staff Employee
+              {employeeModalMode === 'create' ? 'Register Staff Employee' : 'Edit Staff Employee'}
             </div>
           }
           size="lg"
@@ -948,6 +915,18 @@ export default function EmployeesPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold mb-2">Employment Status</label>
+              <Select
+                {...registerEmployee('employmentStatus')}
+                error={employeeErrors.employmentStatus?.message}
+              >
+                <option value="ACTIVE" className="bg-slate-900 text-slate-200">Active</option>
+                <option value="INACTIVE" className="bg-slate-900 text-slate-200">Inactive</option>
+                <option value="SUSPENDED" className="bg-slate-900 text-slate-200">Suspended</option>
+              </Select>
+            </div>
+
             <div className="pt-4 flex justify-end gap-2.5">
               <Button
                 type="button"
@@ -960,106 +939,122 @@ export default function EmployeesPage() {
                 type="submit"
                 loading={isCreatingEmployee}
               >
-                Register Employee
+                {employeeModalMode === 'create' ? 'Register Employee' : 'Save Changes'}
               </Button>
             </div>
           </form>
         </Modal>
 
-        {/* Modal 2: Register Labour */}
+        {/* Modal: Log Office Expense */}
         <Modal
-          open={isLabourModalOpen}
-          onClose={() => setIsLabourModalOpen(false)}
+          open={isExpenseModalOpen}
+          onClose={() => setIsExpenseModalOpen(false)}
           title={
             <div className="flex items-center gap-2">
-              <NotebookTabs className="h-4.5 w-4.5 text-cyan-400" />
-              Register Site Labour Worker
+              <Receipt className="h-4.5 w-4.5 text-cyan-400" />
+              Log Office Expense
             </div>
           }
-          size="lg"
+          size="md"
         >
-          <form onSubmit={handleSubmitLabour(onLabourSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Worker Name</label>
-                <Input
-                  {...registerLabour('name')}
-                  placeholder="e.g. Mason Robert"
-                  error={labourErrors.name?.message}
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Phone Number</label>
-                <Input
-                  {...registerLabour('phoneNumber')}
-                  placeholder="e.g. +1 555-8910"
-                  error={labourErrors.phoneNumber?.message}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Trade Craft</label>
-                <Select
-                  {...registerLabour('trade')}
-                  error={labourErrors.trade?.message}
-                >
-                  <option value="Mason" className="bg-slate-900 text-slate-200">Mason</option>
-                  <option value="Carpenter" className="bg-slate-900 text-slate-200">Carpenter</option>
-                  <option value="Steel Worker" className="bg-slate-900 text-slate-200">Steel Worker</option>
-                  <option value="Plumber" className="bg-slate-900 text-slate-200">Plumber</option>
-                  <option value="Electrician" className="bg-slate-900 text-slate-200">Electrician</option>
-                  <option value="Helper / Laborer" className="bg-slate-900 text-slate-200">Helper / Laborer</option>
-                  <option value="Site Supervisor" className="bg-slate-900 text-slate-200">Site Supervisor</option>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Daily Wage ($)</label>
-                <Input
-                  {...registerLabour('dailyWage')}
-                  placeholder="e.g. 150"
-                  error={labourErrors.dailyWage?.message}
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleExpenseSubmit} className="space-y-4">
             <div>
-              <label className="block text-slate-400 text-xs font-semibold mb-2">Assign to Project</label>
+              <label className="block text-slate-450 text-xs font-semibold mb-2">Pay From Project</label>
               <Select
-                {...registerLabour('projectId')}
-                error={labourErrors.projectId?.message}
+                value={expenseFormData.projectId}
+                onChange={(e) => setExpenseFormData({ ...expenseFormData, projectId: e.target.value })}
+                required
               >
                 <option value="" disabled className="bg-slate-900 text-slate-250">Select Project...</option>
-                {projects.map((p) => (
+                {projects.map((p: any) => (
                   <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
                     {p.code} - {p.name}
                   </option>
                 ))}
               </Select>
+              <BalanceWidget info={mainBalanceInfo} />
+            </div>
+
+            <div>
+              <label className="block text-slate-450 text-xs font-semibold mb-2">Expense Category</label>
+              <Select
+                value={expenseFormData.expenseCategory}
+                onChange={(e) => setExpenseFormData({ ...expenseFormData, expenseCategory: e.target.value })}
+              >
+                {OFFICE_EXPENSE_CATEGORIES.map((c) => (
+                  <option key={c.key} value={c.key} className="bg-slate-900 text-slate-200">{c.label}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-slate-450 text-xs font-semibold mb-2">Paid To (optional)</label>
+              <Input
+                value={expenseFormData.paidTo}
+                onChange={(e) => setExpenseFormData({ ...expenseFormData, paidTo: e.target.value })}
+                placeholder="e.g. Landlord, Electric Co."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-450 text-xs font-semibold mb-2">Amount ($)</label>
+                <Input
+                  type="number"
+                  step="any"
+                  required
+                  value={expenseFormData.amount}
+                  onChange={(e) => setExpenseFormData({ ...expenseFormData, amount: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-slate-450 text-xs font-semibold mb-2">Date</label>
+                <DatePickerInput
+                  id="expenseDate"
+                  value={expenseFormData.date}
+                  onChange={(v) => setExpenseFormData({ ...expenseFormData, date: v })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-450 text-xs font-semibold mb-2">Payment Method</label>
+              <Select
+                value={expenseFormData.paymentMethod}
+                onChange={(e) => setExpenseFormData({ ...expenseFormData, paymentMethod: e.target.value })}
+              >
+                <option value="CASH" className="bg-slate-900 text-slate-200">CASH</option>
+                <option value="BANK" className="bg-slate-900 text-slate-200">BANK TRANSFER</option>
+                <option value="CHEQUE" className="bg-slate-900 text-slate-200">CHEQUE</option>
+                <option value="MOBILE_BANKING" className="bg-slate-900 text-slate-200">MOBILE BANKING</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-slate-450 text-xs font-semibold mb-2">Reference # (optional)</label>
+              <Input
+                value={expenseFormData.referenceNumber}
+                onChange={(e) => setExpenseFormData({ ...expenseFormData, referenceNumber: e.target.value })}
+                placeholder="e.g. INV-2093"
+              />
             </div>
 
             <div className="pt-4 flex justify-end gap-2.5">
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setIsLabourModalOpen(false)}
+                onClick={() => setIsExpenseModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                loading={isCreatingLabour}
-              >
-                Register Worker
+              <Button type="submit" loading={isLoggingExpense}>
+                Log Expense
               </Button>
             </div>
           </form>
         </Modal>
 
-        {/* Modal 3: Disburse Salary */}
+        {/* Modal 2: Disburse Salary */}
         {selectedEmployee && (
           <Modal
             open={isSalaryModalOpen}
@@ -1084,6 +1079,11 @@ export default function EmployeesPage() {
                   <span className="font-bold text-slate-400">Fixed monthly pay:</span>{' '}
                   {formatCurrencyLocal(selectedEmployee.monthlySalary)}
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-slate-450 text-xs font-semibold mb-2">Company-wide Main Balance</label>
+                <BalanceWidget info={mainBalanceInfo} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1237,13 +1237,60 @@ export default function EmployeesPage() {
           </Modal>
         )}
 
+        {/* Drawer: Salary Payment History */}
+        <Drawer
+          open={isSalaryHistoryOpen && !!selectedEmployee}
+          onClose={() => setIsSalaryHistoryOpen(false)}
+          title={
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
+                <History className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-200 text-sm leading-none">{selectedEmployee?.fullName}</h2>
+                <p className="text-[10px] text-slate-500 font-semibold mt-1">Salary Payment History</p>
+              </div>
+            </div>
+          }
+          size="md"
+        >
+          {isFetchingSalaryHistory ? (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+            </div>
+          ) : salaryHistory.length === 0 ? (
+            <p className="text-slate-500 text-xs italic p-6">No salary payments logged yet.</p>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-6 space-y-2">
+              {salaryHistory.map((s: any) => (
+                <div key={s.id} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-200">{s.month}</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">{s.project?.code || 'No project'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400 font-semibold">{formatCurrencyLocal(s.paidAmount)}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                      s.paymentStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-400'
+                        : s.paymentStatus === 'PARTIAL' ? 'bg-amber-500/10 text-amber-400'
+                        : 'bg-rose-500/10 text-rose-400'
+                    }`}>
+                      {s.paymentStatus}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Drawer>
+
         {/* Delete Confirmation Alert */}
         <AlertDialog
           open={deleteConfirmOpen}
           onClose={() => setDeleteConfirmOpen(false)}
           onConfirm={confirmDelete}
-          title="Delete Record?"
-          description="Are you sure you want to delete this record? This action cannot be undone."
+          title="Delete Employee?"
+          description="Are you sure you want to delete this employee record? This action cannot be undone."
           confirmText="Delete"
         />
       </div>

@@ -7,7 +7,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', error, icon, type = 'text', ...props }, ref) => {
+  ({ className = '', error, icon, type = 'text', style, ...props }, ref) => {
     return (
       <div className="w-full">
         <div className="relative flex items-center">
@@ -19,6 +19,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             ref={ref}
+            style={{ colorScheme: 'dark', ...style }}
             className={`
               w-full bg-slate-950/40 border rounded-xl px-3 py-2.5 text-xs text-slate-200 
               placeholder-slate-550 focus:outline-none focus:ring-1 transition-all shadow-inner
