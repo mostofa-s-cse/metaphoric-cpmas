@@ -2,44 +2,31 @@
 # ==============================================================================
 # Production Deploy Script (runs ON the server via SSH)
 #
-# The new build already landed at "$DEPLOY_DIR.incoming" (rsynced by the
-# workflow). This script swaps it into place, runs pending Prisma migrations
-# against the local Postgres using the pre-resolved prisma-toolkit (no install
-# on server), and restarts the app by killing the supervised "node server.js"
-# process -- the panel auto-restarts it (Automatic/Production mode), it's not
-# Passenger. Rolls back on migration failure only -- no post-restart healthcheck.
+# The new build already landed directly at "$DEPLOY_DIR" (rsynced in place by
+# the workflow -- rsync diffs against last deploy's copy, so unchanged files
+# transfer near-nothing). This script runs pending Prisma migrations using
+# the app's own node_modules (no separate toolkit, no install on server),
+# then restarts the app by killing the supervised "node" process -- the
+# panel (Automatic/Production mode) auto-restarts it, it's not Passenger.
+#
+# No backup/rollback: if a migration fails, fix forward with a new commit.
 #
 # Never touches public/uploads/ (local file storage) or .env (managed
-# manually on the server) -- both are carried forward untouched on every
-# swap. Never runs npm install/build either -- both already happened in CI.
+# manually on the server) -- both are excluded from the rsync step.
 #
-# Args: $1 = DEPLOY_DIR   $2 = APP_URL (unused, kept for call-site compat)
+# Args: $1 = DEPLOY_DIR
 # ==============================================================================
 
 set -Eeuo pipefail
 
 DEPLOY_DIR="$1"
-INCOMING_DIR="${DEPLOY_DIR}.incoming"
-BACKUP_DIR="${DEPLOY_DIR}.backup"
 
-if [ ! -d "$INCOMING_DIR" ]; then
-  echo "::error::$INCOMING_DIR not found -- rsync step must run first"
+if [ ! -f "$DEPLOY_DIR/.env" ]; then
+  echo "::error::$DEPLOY_DIR/.env not found -- .env is managed manually, place it there before deploying"
   exit 1
 fi
 
-restart_app() {
-  # This panel isn't Passenger -- it runs the configured Startup command
-  # ("node server.js") as a supervised process in the app's working directory
-  # and auto-restarts it if it exits. Kill it by matching cwd (not port, which
-  # isn't guaranteed) and let the supervisor bring it back up with the new code.
-  local pid target_dir
-  target_dir=$(readlink -f "$DEPLOY_DIR")
-  for pid in $(pgrep -f "node .*server\.js" 2>/dev/null || true); do
-    if [ "$(readlink -f "/proc/$pid/cwd" 2>/dev/null)" = "$target_dir" ]; then
-      kill "$pid" 2>/dev/null || true
-    fi
-  done
-}
+mkdir -p "$DEPLOY_DIR/public/uploads"
 
 find_node() {
   if command -v node >/dev/null 2>&1; then
@@ -57,72 +44,32 @@ find_node() {
   return 1
 }
 
-run_migrations() {
-  local node_bin
-  node_bin=$(find_node) || { echo "::error::no node binary found (checked PATH and ~/.nvm)"; return 1; }
-  ( set -a; source "$DEPLOY_DIR/.env"; set +a
-    cd "$DEPLOY_DIR/prisma-toolkit"
-    # actions/upload-artifact's zip round-trip strips the executable bit off
-    # native binaries (and drops symlinks, hence the real entry point below
-    # instead of node_modules/.bin/prisma).
-    find node_modules/@prisma/engines -type f -exec chmod +x {} + 2>/dev/null || true
-    # This server's outbound firewall silently drops (doesn't reject) blocked
-    # connections, so Prisma's checkpoint.prisma.io telemetry ping hangs for
-    # minutes on TCP retries instead of failing fast. Disable it.
-    CHECKPOINT_DISABLE=1 "$node_bin" node_modules/prisma/build/index.js migrate deploy )
-}
-
-rollback() {
-  echo "::error::$1. Rolling back..."
-  if [ -d "$BACKUP_DIR" ]; then
-    UPLOADS_TMP=$(mktemp -d)
-    if [ -d "$DEPLOY_DIR/public/uploads" ]; then
-      mv "$DEPLOY_DIR/public/uploads" "$UPLOADS_TMP/uploads"
-    fi
-    rm -rf "$DEPLOY_DIR"
-    mv "$BACKUP_DIR" "$DEPLOY_DIR"
-    if [ -d "$UPLOADS_TMP/uploads" ]; then
-      rm -rf "$DEPLOY_DIR/public/uploads"
-      mv "$UPLOADS_TMP/uploads" "$DEPLOY_DIR/public/uploads"
-    fi
-    rm -rf "$UPLOADS_TMP"
-    restart_app
-  fi
-  exit 1
-}
-
-# --- Preserve things the new build must not clobber ---
-mkdir -p "$DEPLOY_DIR/public/uploads"
-
-# --- Back up current release for rollback ---
-rm -rf "$BACKUP_DIR"
-if [ -d "$DEPLOY_DIR" ] && [ -n "$(ls -A "$DEPLOY_DIR" 2>/dev/null)" ]; then
-  mv "$DEPLOY_DIR" "$BACKUP_DIR"
-fi
-
-# --- Move new build into place, carrying over the persisted uploads dir ---
-mv "$INCOMING_DIR" "$DEPLOY_DIR"
-mkdir -p "$DEPLOY_DIR/public"
-if [ -d "$BACKUP_DIR/public/uploads" ]; then
-  rm -rf "$DEPLOY_DIR/public/uploads"
-  mv "$BACKUP_DIR/public/uploads" "$DEPLOY_DIR/public/uploads"
-fi
-if [ -f "$BACKUP_DIR/.env" ]; then
-  cp "$BACKUP_DIR/.env" "$DEPLOY_DIR/.env"
-fi
-
-if [ ! -f "$DEPLOY_DIR/.env" ]; then
-  echo "::error::$DEPLOY_DIR/.env not found -- .env is managed manually, place it there before deploying"
-  exit 1
-fi
+NODE_BIN=$(find_node) || { echo "::error::no node binary found (checked PATH and ~/.nvm)"; exit 1; }
 
 echo "Running database migrations..."
-if ! run_migrations; then
-  rollback "Migration failed"
-fi
+(
+  cd "$DEPLOY_DIR"
+  set -a; source .env; set +a
+  # actions/upload-artifact's zip round-trip strips the executable bit off
+  # native binaries and drops symlinks (hence invoking prisma's real entry
+  # point below, not the node_modules/.bin/prisma symlink).
+  find node_modules/@prisma/engines -type f -exec chmod +x {} + 2>/dev/null || true
+  # This server's outbound firewall silently drops (doesn't reject) blocked
+  # connections, so Prisma's checkpoint.prisma.io telemetry ping hangs for
+  # minutes on TCP retries instead of failing fast. Disable it.
+  CHECKPOINT_DISABLE=1 "$NODE_BIN" node_modules/prisma/build/index.js migrate deploy
+)
 
 echo "Restarting app..."
-restart_app
+# Match on cwd, not command name -- the panel's Startup command is `npm
+# start` (spawns next start under it), so the exact process name/args aren't
+# reliable to pattern-match. Scoping strictly by cwd keeps this safe on a
+# shared box regardless of what's actually running.
+target_dir=$(readlink -f "$DEPLOY_DIR")
+for pid in $(pgrep -f "node|npm" 2>/dev/null || true); do
+  if [ "$(readlink -f "/proc/$pid/cwd" 2>/dev/null)" = "$target_dir" ]; then
+    kill "$pid" 2>/dev/null || true
+  fi
+done
 
 echo "Deployment successful"
-rm -rf "$BACKUP_DIR"

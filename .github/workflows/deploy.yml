@@ -2,20 +2,24 @@
 # Production Deployment Workflow
 # ============================================================
 #
-# Builds the Next.js app (standalone output) + a Prisma migration
-# toolkit in CI, then ships both to the server over SSH. The server
-# never runs `npm install` or `npm run build` itself -- that's what
-# was getting OOM-killed on the shared host.
+# Builds the whole app in CI (npm ci + npm run build), ships the entire
+# project -- full node_modules included -- to the server over SSH, runs
+# pending Prisma migrations there, and kills the running node process so
+# the panel's supervisor (Automatic/Production mode) restarts it with the
+# new code. The server never runs npm install or npm run build itself --
+# that's what was getting OOM-killed on the shared host.
 #
-# `prisma migrate deploy` runs automatically on the server as part of
-# every deploy, using the pre-resolved prisma-toolkit (no install
-# there either). A failed migration rolls the whole deploy back.
+# Synced directly into the live deploy path (not a staging dir that gets
+# wiped every run), so rsync can diff against last deploy's copy -- unchanged
+# files (most of node_modules, most of the time) transfer near-nothing.
+#
+# No backup/rollback: if a migration fails, fix forward with a new commit.
 #
 # REQUIRED VARIABLES (Settings > Secrets and variables > Actions > Variables):
 #   SSH_HOST      - Server IP or domain
 #   SSH_USER      - SSH username
-#   DEPLOY_DIR    - Absolute path to the cPanel Node.js app root
-#   APP_URL       - URL to curl after restart to confirm the app is up
+#   DEPLOY_DIR    - Absolute path to the app's working directory on the panel
+#   APP_URL       - unused currently, kept for future use
 #
 # REQUIRED SECRETS (Settings > Secrets and variables > Actions > Secrets):
 #   SSH_PRIVATE_KEY - Private SSH key (server also accepts password auth,
@@ -23,6 +27,10 @@
 #
 # .env is managed manually on the server (DEPLOY_DIR/.env) and is never
 # touched by this workflow -- not written, not overwritten, not deleted.
+#
+# Panel's "Startup command" must be `npm start` (or `node_modules/.bin/next
+# start` equivalent) with Working directory set to DEPLOY_DIR, in
+# Automatic (Production) mode so it auto-restarts when killed.
 # ============================================================
 
 name: Deploy
@@ -87,59 +95,34 @@ jobs:
           DATABASE_URL: postgresql://build:build@localhost:5432/build?schema=public
         run: npm run build
 
-      - name: Assemble app artifact (standalone output)
+      - name: Assemble deploy artifact (whole project)
         run: |
           set -Eeuo pipefail
           mkdir -p dist/app
-          cp -r .next/standalone/. dist/app/
-          mkdir -p dist/app/.next
-          cp -r .next/static dist/app/.next/static
-          cp -r public dist/app/public
+          cp -r .next node_modules public prisma dist/app/
+          cp package.json package-lock.json next.config.ts prisma.config.ts dist/app/
 
-      - name: Assemble prisma toolkit artifact
-        run: |
-          set -Eeuo pipefail
-          mkdir -p dist/prisma-toolkit/prisma/migrations
-          cp prisma/schema.prisma dist/prisma-toolkit/prisma/
-          if [ -d prisma/migrations ]; then cp -r prisma/migrations/. dist/prisma-toolkit/prisma/migrations/; fi
-          cp prisma.config.ts dist/prisma-toolkit/
-          cp package.json dist/prisma-toolkit/
-          # Whole node_modules, not a hand-picked subset -- prisma's CLI pulls
-          # in enough transitive deps (@prisma/config -> effect, etc.) that
-          # guessing which folders to copy turned into permanent whack-a-mole.
-          # This is the only reliably correct option short of re-resolving
-          # deps from scratch, and the artifact is one-time/deploy-only.
-          cp -r node_modules dist/prisma-toolkit/node_modules
-
-      - name: Upload app artifact
+      - name: Upload deploy artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-build
           path: dist/app
           retention-days: 3
 
-      - name: Upload prisma toolkit artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: prisma-toolkit
-          path: dist/prisma-toolkit
-          retention-days: 3
-
   deploy:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Validate configuration
         env:
           SSH_HOST: ${{ vars.SSH_HOST }}
           SSH_USER: ${{ vars.SSH_USER }}
           DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
-          APP_URL: ${{ vars.APP_URL }}
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          for var in SSH_HOST SSH_USER DEPLOY_DIR APP_URL SSH_KEY; do
+          for var in SSH_HOST SSH_USER DEPLOY_DIR SSH_KEY; do
             if [ -z "${!var}" ]; then
               echo "::error::$var is required"
               exit 1
@@ -149,17 +132,11 @@ jobs:
       - name: Checkout (for deploy script)
         uses: actions/checkout@v4
 
-      - name: Download app artifact
+      - name: Download deploy artifact
         uses: actions/download-artifact@v4
         with:
           name: app-build
           path: dist/app
-
-      - name: Download prisma toolkit artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: prisma-toolkit
-          path: dist/prisma-toolkit
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -180,20 +157,17 @@ jobs:
           DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
         run: |
           set -Eeuo pipefail
-          ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_DIR' '$DEPLOY_DIR.incoming' '$DEPLOY_DIR.incoming/prisma-toolkit'"
-          rsync -az --delete \
+          ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_DIR'"
+          rsync -avz --delete --itemize-changes \
             --exclude 'public/uploads/' \
             --exclude '.env' \
-            dist/app/ "$SSH_USER@$SSH_HOST:$DEPLOY_DIR.incoming/"
-          rsync -az --delete \
-            dist/prisma-toolkit/ "$SSH_USER@$SSH_HOST:$DEPLOY_DIR.incoming/prisma-toolkit/"
+            dist/app/ "$SSH_USER@$SSH_HOST:$DEPLOY_DIR/"
 
       - name: Run deploy script on server
         env:
           SSH_USER: ${{ vars.SSH_USER }}
           SSH_HOST: ${{ vars.SSH_HOST }}
           DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
-          APP_URL: ${{ vars.APP_URL }}
         run: |
           set -Eeuo pipefail
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_DIR" "$APP_URL" < .github/scripts/deploy.sh
+          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_DIR" < .github/scripts/deploy.sh
