@@ -85,6 +85,12 @@ interface ApiCashOut {
   };
 }
 
+interface TransactionSummary {
+  cashIn: { total: number; byMode: Record<string, number> };
+  cashOut: { total: number; byMode: Record<string, number> };
+  net: number;
+}
+
 export default function TransactionsPage() {
   const { auth } = usePage().props as any;
   const user = auth?.user;
@@ -92,6 +98,8 @@ export default function TransactionsPage() {
 
   const [activeTab, setActiveTab] = useState<'cashin' | 'cashout'>('cashin');
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectFilter, setProjectFilter] = useState('ALL');
+  const [summary, setSummary] = useState<TransactionSummary | null>(null);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -173,6 +181,7 @@ export default function TransactionsPage() {
           page,
           limit,
           search: searchTerm,
+          projectId: projectFilter !== 'ALL' ? projectFilter : undefined,
         }
       });
       if (res.data.status === 'success') {
@@ -203,9 +212,28 @@ export default function TransactionsPage() {
     }
   };
 
+  const fetchSummary = async () => {
+    try {
+      const res = await axios.get('/api/transactions/summary', {
+        params: {
+          projectId: projectFilter !== 'ALL' ? projectFilter : undefined,
+        }
+      });
+      if (res.data.status === 'success') {
+        setSummary(res.data.data.summary);
+      }
+    } catch (err) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     fetchCashTransactions();
-  }, [page, limit, activeTab]);
+  }, [page, limit, activeTab, projectFilter]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [projectFilter]);
 
   useEffect(() => {
     fetchProjects();
@@ -353,6 +381,65 @@ export default function TransactionsPage() {
             </div>
           )}
         </div>
+
+        {/* Project Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <Select
+            value={projectFilter}
+            onChange={(e) => { setProjectFilter(e.target.value); setPage(1); }}
+            className="sm:w-[280px]"
+          >
+            <option value="ALL" className="bg-slate-900 text-slate-200">All Projects</option>
+            <option value="GENERAL" className="bg-slate-900 text-slate-200">General Corporate (No Project)</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                {p.code} - {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        {/* Cash Flow Summary */}
+        {summary && (
+          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
+                <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Total Cash In</span>
+                <span className="text-base font-bold text-emerald-400 flex items-center gap-1.5">
+                  <ArrowUpRight className="h-4 w-4" />
+                  {formatCurrencyLocal(summary.cashIn.total)}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
+                <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Total Cash Out</span>
+                <span className="text-base font-bold text-rose-400 flex items-center gap-1.5">
+                  <ArrowDownRight className="h-4 w-4" />
+                  {formatCurrencyLocal(summary.cashOut.total)}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-950/40 border border-cyan-500/20 rounded-xl">
+                <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Net</span>
+                <span className={`text-base font-bold ${summary.net >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+                  {formatCurrencyLocal(summary.net)}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-800/60">
+              {(['CASH', 'BANK', 'CHEQUE', 'MOBILE_BANKING'] as const).map((mode) => (
+                <div key={mode} className="p-2.5 bg-slate-950/30 border border-slate-800 rounded-lg text-[10px]">
+                  <span className="block text-slate-500 font-bold uppercase tracking-wide mb-1">{mode.replace('_', ' ')}</span>
+                  <span className="block text-emerald-400 font-semibold">
+                    +{formatCurrencyLocal(summary.cashIn.byMode[mode] || 0)}
+                  </span>
+                  <span className="block text-rose-400 font-semibold">
+                    -{formatCurrencyLocal(summary.cashOut.byMode[mode] || 0)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-slate-800 gap-4">

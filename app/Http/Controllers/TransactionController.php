@@ -34,7 +34,11 @@ class TransactionController extends Controller
         $search = $request->get('search', '');
 
         $query = CashIn::with(['project:id,name,code']);
-        if ($projectId) $query->where('projectId', $projectId);
+        if ($projectId === 'GENERAL') {
+            $query->whereNull('projectId');
+        } elseif ($projectId) {
+            $query->where('projectId', $projectId);
+        }
         if ($search) $query->where('clientName', 'like', "%{$search}%");
 
         $total = $query->count();
@@ -108,7 +112,11 @@ class TransactionController extends Controller
 
         $query = CashOut::with(['project:id,name,code', 'supplier:id,name',
             'vendor:id,name', 'employee:id,fullName', 'labour:id,name']);
-        if ($projectId) $query->where('projectId', $projectId);
+        if ($projectId === 'GENERAL') {
+            $query->whereNull('projectId');
+        } elseif ($projectId) {
+            $query->where('projectId', $projectId);
+        }
         if ($search) $query->where('paidTo', 'like', "%{$search}%");
 
         $total = $query->count();
