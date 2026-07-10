@@ -86,6 +86,7 @@ export default function MaterialsPage() {
 
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectFilter, setProjectFilter] = useState('ALL');
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -138,6 +139,7 @@ export default function MaterialsPage() {
           page,
           limit,
           search: searchTerm,
+          projectId: projectFilter !== 'ALL' ? projectFilter : undefined,
         }
       });
       if (res.data.status === 'success') {
@@ -168,7 +170,7 @@ export default function MaterialsPage() {
 
   useEffect(() => {
     fetchMaterials();
-  }, [page, limit]);
+  }, [page, limit, projectFilter]);
 
   useEffect(() => {
     fetchDependencies();
@@ -281,13 +283,28 @@ export default function MaterialsPage() {
           )}
         </div>
 
-        {/* Search Filter */}
-        <Input
-          placeholder="Search by material, supplier, project, or category..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          icon={<Search className="h-4 w-4" />}
-        />
+        {/* Search + Project Filter */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by material, supplier, project, or category..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<Search className="h-4 w-4" />}
+            className="flex-1"
+          />
+          <Select
+            value={projectFilter}
+            onChange={(e) => { setProjectFilter(e.target.value); setPage(1); }}
+            className="sm:w-[260px]"
+          >
+            <option value="ALL" className="bg-slate-900 text-slate-200">All Projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                {p.code} - {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
 
         {/* Main Table */}
         {isFetching && materials.length === 0 ? (
