@@ -28,6 +28,12 @@ fi
 
 mkdir -p "$DEPLOY_DIR/public/uploads"
 
+# actions/upload-artifact's zip round-trip strips the executable bit off
+# every binary/script in the artifact (native engines, next's CLI, etc).
+# chmod follows symlinks, so this covers node_modules/.bin's symlinked
+# entries too, not just plain files.
+chmod +x "$DEPLOY_DIR"/node_modules/.bin/* 2>/dev/null || true
+
 find_node() {
   if command -v node >/dev/null 2>&1; then
     command -v node
