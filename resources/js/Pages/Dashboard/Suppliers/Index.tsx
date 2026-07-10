@@ -26,7 +26,6 @@ const supplierSchema = z.object({
   phoneNumber: z.string().min(5, 'Phone number is required'),
   email: z.string().email('Enter a valid email').optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
-  openingBalance: z.string().refine((v) => !isNaN(parseFloat(v)), { message: 'Must be a number' }).optional().or(z.literal('')),
   notes: z.string().max(500).optional().or(z.literal('')),
   assignments: z.array(z.object({
     projectId: z.string().min(1, 'Project is required'),
@@ -68,6 +67,7 @@ export default function SuppliersPage() {
 
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectFilter, setProjectFilter] = useState('ALL');
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -105,7 +105,6 @@ export default function SuppliersPage() {
       phoneNumber: '',
       email: '',
       address: '',
-      openingBalance: '0',
       notes: '',
       assignments: [],
     },
@@ -126,6 +125,7 @@ export default function SuppliersPage() {
           page,
           limit,
           search: searchTerm,
+          projectId: projectFilter !== 'ALL' ? projectFilter : undefined,
         }
       });
       if (res.data.status === 'success') {
@@ -155,7 +155,7 @@ export default function SuppliersPage() {
   useEffect(() => {
     fetchSuppliers();
     fetchProjects();
-  }, [page, limit]);
+  }, [page, limit, projectFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -165,15 +165,27 @@ export default function SuppliersPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Track updates to selected supplier when lists refresh
+  // Track updates to selected supplier when the list refreshes (e.g. after an
+  // edit or delete elsewhere), without clobbering the richer detail fields
+  // (materials/cashOuts) that only come from the full record fetched by
+  // handleViewHistory(). The list endpoint's supplier objects are lighter
+  // weight, so we keep whatever detail is already loaded and only refresh the
+  // scalar fields from the list. Depending only on `suppliers` (not
+  // `selectedSupplier`) prevents this effect from re-firing — and clobbering
+  // the fetched detail — immediately after handleViewHistory() sets it.
   useEffect(() => {
-    if (selectedSupplier) {
-      const updated = suppliers.find((s) => s.id === selectedSupplier.id);
-      if (updated) {
-        setSelectedSupplier(updated);
-      }
-    }
-  }, [suppliers, selectedSupplier]);
+    setSelectedSupplier((prev) => {
+      if (!prev) return prev;
+      const updated = suppliers.find((s) => s.id === prev.id);
+      if (!updated) return prev;
+      return {
+        ...updated,
+        materials: prev.materials ?? updated.materials,
+        cashOuts: prev.cashOuts ?? updated.cashOuts,
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suppliers]);
 
   const handleOpenCreate = () => {
     setModalMode('create');
@@ -184,7 +196,6 @@ export default function SuppliersPage() {
       phoneNumber: '',
       email: '',
       address: '',
-      openingBalance: '0',
       notes: '',
       assignments: [],
     });
@@ -201,7 +212,6 @@ export default function SuppliersPage() {
       phoneNumber: sup.phoneNumber,
       email: sup.email || '',
       address: sup.address || '',
-      openingBalance: sup.openingBalance.toString(),
       notes: sup.notes || '',
       assignments: sup.projectAssignments?.map(a => ({
         projectId: a.projectId,
@@ -243,7 +253,7 @@ export default function SuppliersPage() {
     try {
       const payload = {
         ...values,
-        openingBalance: parseFloat(values.openingBalance || '0'),
+        email: values.email?.trim() ? values.email.trim() : undefined,
         assignments: values.assignments?.map(a => ({
           projectId: a.projectId,
           contractAmount: parseFloat(a.contractAmount || '0'),
@@ -314,12 +324,27 @@ export default function SuppliersPage() {
         </div>
 
         {/* Filter */}
-        <Input
-          placeholder="Search by company or supplier name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          icon={<Search className="h-4 w-4" />}
-        />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by company or supplier name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<Search className="h-4 w-4" />}
+            className="flex-1"
+          />
+          <Select
+            value={projectFilter}
+            onChange={(e) => { setProjectFilter(e.target.value); setPage(1); }}
+            className="sm:w-[260px]"
+          >
+            <option value="ALL" className="bg-slate-900 text-slate-200">All Projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                {p.code} - {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
 
         {/* Suppliers Table/Grid */}
         {isFetching && suppliers.length === 0 ? (
@@ -618,7 +643,7 @@ export default function SuppliersPage() {
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 text-xs font-semibold mb-2">Email Address</label>
+                    <label className="block text-slate-400 text-xs font-semibold mb-2">Email Address (Optional)</label>
                     <Input
                       type="email"
                       {...register('email')}
@@ -636,17 +661,6 @@ export default function SuppliersPage() {
                     error={errors.address?.message}
                   />
                 </div>
-
-                {modalMode === 'create' && (
-                  <div>
-                    <label className="block text-slate-400 text-xs font-semibold mb-2">Opening Balance ($)</label>
-                    <Input
-                      {...register('openingBalance')}
-                      placeholder="0.00"
-                      error={errors.openingBalance?.message}
-                    />
-                  </div>
-                )}
 
                 <div>
                   <label className="block text-slate-400 text-xs font-semibold mb-2">Notes</label>

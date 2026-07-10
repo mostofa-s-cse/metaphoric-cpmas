@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashOut;
 use App\Models\ProjectSupplier;
 use App\Models\Supplier;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SupplierController extends Controller
@@ -39,7 +41,7 @@ class SupplierController extends Controller
         $total = $query->count();
         $suppliers = $query->orderBy('created_at', 'desc')
             ->skip($skip)->take($limit)
-            ->with(['projectAssignments.project:id,name,code'])
+            ->with(['projectAssignments.project:id,name,code', 'materials:id,supplierId,totalPrice'])
             ->get();
 
         return $this->apiPaginated('suppliers', $suppliers, $total, $page, $limit,
@@ -155,7 +157,22 @@ class SupplierController extends Controller
         }
 
         $supplier = Supplier::findOrFail($id);
-        $supplier->delete();
+
+        DB::transaction(function () use ($supplier) {
+            // Materials reference suppliers with an onDelete('restrict') constraint,
+            // so they must be removed explicitly before the supplier (matches the
+            // "This will permanently remove all material purchases..." confirmation
+            // copy shown to the user). Deleted individually (not a bulk query) so
+            // Auditable model events fire for each row, same pattern as
+            // MaterialController::destroy().
+            $supplier->materials()->get()->each(function ($material) {
+                CashOut::where('materialId', $material->id)->get()->each->delete();
+                $material->delete();
+            });
+
+            $supplier->delete();
+        });
+
         return $this->apiSuccess(null, 'Supplier deleted successfully', self::PATH);
     }
 
