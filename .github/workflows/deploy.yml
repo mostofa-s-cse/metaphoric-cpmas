@@ -108,6 +108,10 @@ jobs:
           name: app-build
           path: dist/app
           retention-days: 3
+          # Default excludes dotfiles/dirs -- .next starts with a dot and was
+          # silently dropped entirely without this, despite the "cp -r .next"
+          # step above succeeding. That's what caused the 404s.
+          include-hidden-files: true
 
   deploy:
     name: Deploy
