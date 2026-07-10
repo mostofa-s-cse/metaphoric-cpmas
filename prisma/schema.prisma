@@ -276,7 +276,7 @@ model Salary {
 model Document {
   id          String   @id @default(uuid())
   name        String
-  url         String // URL or file path in supabase storage
+  url         String // URL or local file path (public/uploads)
   uploadDate  DateTime @default(now())
   description String?
   fileType    String // PDF, IMAGE, EXCEL, WORD, etc.
