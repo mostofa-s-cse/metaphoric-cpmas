@@ -99,7 +99,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           mkdir -p dist/app
-          rsync -a --exclude='.git' --exclude='dist' --exclude='public/uploads' --exclude='.env' ./ dist/app/
+          # Leading slashes anchor these to the transfer root -- unanchored
+          # `--exclude=dist` matched node_modules/@prisma/engines/dist/ (and
+          # who knows how many other packages' dist/ folders) too, silently
+          # gutting half of node_modules and breaking prisma's engine.
+          rsync -a --exclude='/.git' --exclude='/dist' --exclude='/public/uploads' --exclude='/.env' ./ dist/app/
 
       - name: Upload deploy artifact
         uses: actions/upload-artifact@v4
