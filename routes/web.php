@@ -164,6 +164,8 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::delete('/materials/{id}', [MaterialController::class, 'destroy']);
 
     // Transactions (Cash In / Cash Out)
+    Route::get('/transactions/summary', [TransactionController::class, 'summary']);
+
     Route::get('/transactions/cash-in', [TransactionController::class, 'indexCashIn']);
     Route::post('/transactions/cash-in', [TransactionController::class, 'storeCashIn']);
     Route::patch('/transactions/cash-in/{id}', [TransactionController::class, 'updateCashIn']);

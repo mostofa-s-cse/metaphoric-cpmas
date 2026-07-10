@@ -253,6 +253,44 @@ class TransactionController extends Controller
         return $this->apiSuccess(null, 'Cash-out transaction deleted', self::PATH_OUT);
     }
 
+    public function summary(Request $request)
+    {
+        $projectId = $request->get('projectId');
+
+        $cashInQuery = CashIn::query();
+        $cashOutQuery = CashOut::query();
+
+        if ($projectId === 'GENERAL') {
+            $cashInQuery->whereNull('projectId');
+            $cashOutQuery->whereNull('projectId');
+        } elseif ($projectId) {
+            $cashInQuery->where('projectId', $projectId);
+            $cashOutQuery->where('projectId', $projectId);
+        }
+
+        $cashIns = $cashInQuery->get();
+        $cashOuts = $cashOutQuery->get();
+
+        $modes = ['CASH', 'BANK', 'CHEQUE', 'MOBILE_BANKING'];
+        $cashInByMode = [];
+        $cashOutByMode = [];
+        foreach ($modes as $mode) {
+            $cashInByMode[$mode] = (float) $cashIns->where('paymentMethod', $mode)->sum('amount');
+            $cashOutByMode[$mode] = (float) $cashOuts->where('paymentMethod', $mode)->sum('amount');
+        }
+
+        $cashInTotal = (float) $cashIns->sum('amount');
+        $cashOutTotal = (float) $cashOuts->sum('amount');
+
+        return $this->apiSuccess([
+            'summary' => [
+                'cashIn' => ['total' => $cashInTotal, 'byMode' => $cashInByMode],
+                'cashOut' => ['total' => $cashOutTotal, 'byMode' => $cashOutByMode],
+                'net' => $cashInTotal - $cashOutTotal,
+            ],
+        ], 'Transaction summary retrieved', '/transactions/summary');
+    }
+
     public function page()
     {
         return Inertia::render('Dashboard/Transactions/Index');
