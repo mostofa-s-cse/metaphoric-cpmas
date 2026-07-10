@@ -20,6 +20,8 @@ import {
   History,
   Globe,
   Settings,
+  ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 
 interface NavItem {
@@ -28,6 +30,7 @@ interface NavItem {
   routeName: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: string[];
+  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
@@ -39,7 +42,17 @@ const navItems: NavItem[] = [
   { name: 'Materials',         href: '/dashboard/materials',   routeName: 'dashboard.materials', icon: PackageSearch,   roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'] },
   { name: 'Transactions',      href: '/dashboard/transactions',routeName: 'dashboard.transactions', icon: ArrowUpDown,  roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DATA_ENTRY_OPERATOR'] },
   { name: 'Documents',         href: '/dashboard/documents',   routeName: 'dashboard.documents', icon: FileText,       roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'] },
-  { name: 'Reports & P&L',     href: '/dashboard/reports',     routeName: 'dashboard.reports',   icon: TrendingUp,      roles: ['SUPER_ADMIN'] },
+  {
+    name: 'Reports', href: '/dashboard/reports', routeName: 'dashboard.reports', icon: TrendingUp, roles: ['SUPER_ADMIN'],
+    children: [
+      { name: 'Financial Statement', href: '/dashboard/reports',           routeName: 'dashboard.reports',           icon: TrendingUp, roles: ['SUPER_ADMIN'] },
+      { name: 'Project Report',      href: '/dashboard/reports/projects',  routeName: 'dashboard.reports.projects',  icon: TrendingUp, roles: ['SUPER_ADMIN'] },
+      { name: 'Vendor Report',       href: '/dashboard/reports/vendors',   routeName: 'dashboard.reports.vendors',   icon: TrendingUp, roles: ['SUPER_ADMIN'] },
+      { name: 'Supplier Report',     href: '/dashboard/reports/suppliers', routeName: 'dashboard.reports.suppliers', icon: TrendingUp, roles: ['SUPER_ADMIN'] },
+      { name: 'Material Report',     href: '/dashboard/reports/materials', routeName: 'dashboard.reports.materials', icon: TrendingUp, roles: ['SUPER_ADMIN'] },
+      { name: 'Employee Report',     href: '/dashboard/reports/employees', routeName: 'dashboard.reports.employees', icon: TrendingUp, roles: ['SUPER_ADMIN'] },
+    ],
+  },
   { name: 'Website Management',href: '/dashboard/website',     routeName: 'dashboard.website',   icon: Globe,           roles: ['SUPER_ADMIN', 'ADMIN'] },
   { name: 'User Management',   href: '/dashboard/users',       routeName: 'dashboard.users',     icon: ShieldCheck,     roles: ['SUPER_ADMIN'] },
   { name: 'Audit Logs',        href: '/dashboard/audit-logs',  routeName: 'dashboard.audit-logs',icon: History,         roles: ['SUPER_ADMIN', 'ADMIN'] },
@@ -70,6 +83,28 @@ export default function AuthenticatedLayout({ children, header }: Props) {
 
   const currentPath = window.location.pathname;
 
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    navItems.forEach((item) => {
+      if (item.children?.some((child) => currentPath === child.href)) {
+        initial.add(item.name);
+      }
+    });
+    return initial;
+  });
+
+  function toggleMenu(name: string) {
+    setExpandedMenus((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
@@ -87,6 +122,7 @@ export default function AuthenticatedLayout({ children, header }: Props) {
 
   function isActive(item: NavItem) {
     if (item.href === '/dashboard') return currentPath === '/dashboard';
+    if (item.children) return currentPath === item.href || item.children.some((c) => currentPath === c.href);
     return currentPath === item.href || currentPath.startsWith(item.href + '/');
   }
 
@@ -104,6 +140,50 @@ export default function AuthenticatedLayout({ children, header }: Props) {
         {allowedNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
+
+          if (item.children && item.children.length > 0) {
+            const expanded = expandedMenus.has(item.name);
+            const allowedChildren = item.children.filter((c) => c.roles.includes(userRole));
+            return (
+              <div key={item.name}>
+                <button
+                  type="button"
+                  onClick={() => toggleMenu(item.name)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 group cursor-pointer ${
+                    active
+                      ? 'bg-gradient-to-r from-cyan-500/15 to-blue-600/10 text-cyan-400 border-l-[3px] border-cyan-400 shadow-[inset_0px_0px_20px_rgba(34,211,238,0.05)] pl-3.5'
+                      : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200 pl-4 hover:translate-x-1'
+                  }`}
+                >
+                  <Icon className={`h-[18px] w-[18px] transition-colors shrink-0 ${active ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                  <span className="flex-1 text-left">{item.name}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+                {expanded && (
+                  <div className="mt-1 ml-4 pl-4 border-l border-slate-800/60 space-y-1">
+                    {allowedChildren.map((child) => {
+                      const childActive = currentPath === child.href;
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onLinkClick}
+                          className={`block px-3 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 ${
+                            childActive
+                              ? 'text-cyan-400 bg-cyan-500/5'
+                              : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/30'
+                          }`}
+                        >
+                          {child.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.href}
@@ -219,6 +299,17 @@ export default function AuthenticatedLayout({ children, header }: Props) {
             <h2 className="text-sm lg:text-base font-bold text-slate-200 uppercase tracking-wider capitalize">
               {pageTitle}
             </h2>
+            {currentPath.startsWith('/dashboard/website') && (
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/10 transition-all"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Visit Website
+              </a>
+            )}
           </div>
 
           {/* Notifications */}

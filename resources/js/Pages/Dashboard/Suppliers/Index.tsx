@@ -369,104 +369,111 @@ export default function SuppliersPage() {
             </p>
           </div>
         ) : (
-          <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {suppliers.map((sup) => (
-              <div
-                key={sup.id}
-                onClick={() => handleViewHistory(sup)}
-                className="bg-slate-900/25 border border-slate-800/80 rounded-2xl p-6 transition-all hover:border-slate-700/85 cursor-pointer flex flex-col justify-between group relative overflow-hidden backdrop-blur-md hover:shadow-xl"
-              >
-                <div>
-                  <h3 className="font-bold text-slate-200 text-sm group-hover:text-cyan-400 transition-colors">
-                    {sup.name}
-                  </h3>
-                  {sup.companyName && (
-                    <p className="text-slate-400 text-xs font-semibold mt-0.5">{sup.companyName}</p>
-                  )}
-                  {sup.notes && (
-                    <p className="text-slate-500 text-[11px] mt-2.5 line-clamp-2 leading-relaxed font-medium">
-                      {sup.notes}
-                    </p>
-                  )}
-
-                  {/* Assigned Projects Badges */}
-                  {sup.projectAssignments && sup.projectAssignments.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {sup.projectAssignments.map((pa: any) => (
-                        <span key={pa.id} className="px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-[9px] font-semibold text-slate-400">
-                          {pa.project?.name || pa.project?.code}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 border-t border-slate-800/80 pt-4 space-y-2">
-                  <div className="flex items-center text-[11px] text-slate-400 gap-2">
-                    <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                    <span>{sup.phoneNumber}</span>
-                  </div>
-                  {sup.email && (
-                    <div className="flex items-center text-[11px] text-slate-400 gap-2">
-                      <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">{sup.email}</span>
-                    </div>
-                  )}
-                  {sup.address && (
-                    <div className="flex items-center text-[11px] text-slate-400 gap-2">
-                      <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">{sup.address}</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between border-t border-slate-800/40 pt-3 text-[11px]">
-                    <span className="text-slate-400 font-semibold">Total Purchases:</span>
-                    <span className="font-bold text-slate-200">
-                      {(sup.materials || []).length} Invoice(s)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400 font-semibold">Outstanding Due:</span>
-                    <span className={`font-bold ${sup.currentDue > 0 ? 'text-amber-400' : 'text-slate-450'}`}>
-                      {formatCurrencyLocal(sup.currentDue)}
-                    </span>
-                  </div>
-                </div>
-
-                {user && user.role !== 'PROJECT_MANAGER' && (
-                  <div className="mt-4 pt-3 border-t border-slate-800/40 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => handleOpenEdit(sup, e)}
-                      className="p-2 text-slate-450 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
-                      title="Edit supplier"
+          <div className="bg-slate-900/25 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md animate-in fade-in duration-300">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <th className="py-5 px-6">Supplier</th>
+                    <th className="py-5 px-6">Projects Assigned</th>
+                    <th className="py-5 px-6">Contact</th>
+                    <th className="py-5 px-6 text-right">Total Purchases</th>
+                    <th className="py-5 px-6 text-right">Outstanding Due</th>
+                    {user && user.role !== 'PROJECT_MANAGER' && <th className="py-5 px-6 text-right">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-xs">
+                  {suppliers.map((sup) => (
+                    <tr
+                      key={sup.id}
+                      onClick={() => handleViewHistory(sup)}
+                      className="hover:bg-slate-900/40 transition-colors cursor-pointer"
                     >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
-                      <button
-                        onClick={(e) => handleDeleteClick(sup.id, e)}
-                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
-                        title="Delete supplier"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                      <td className="py-5 px-6 max-w-[220px]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-slate-200 truncate">{sup.name}</h4>
+                          {!sup.phoneNumber && (
+                            <span
+                              className="shrink-0 px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[9px] font-bold text-amber-400 uppercase tracking-wide"
+                              title="Auto-created from a Material Purchase's 'Other' supplier field — profile details (phone, address) were never filled in."
+                            >
+                              Other Entry
+                            </span>
+                          )}
+                        </div>
+                        {sup.companyName && (
+                          <p className="text-slate-400 text-[11px] font-semibold mt-0.5 truncate">{sup.companyName}</p>
+                        )}
+                      </td>
+                      <td className="py-5 px-6 max-w-[200px]">
+                        {sup.projectAssignments && sup.projectAssignments.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {sup.projectAssignments.map((pa: any) => (
+                              <span key={pa.id} className="px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-[9px] font-semibold text-slate-400">
+                                {pa.project?.code || pa.project?.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="py-5 px-6 text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                          <span>{sup.phoneNumber || '—'}</span>
+                        </div>
+                        {sup.email && (
+                          <div className="flex items-center gap-1.5 mt-1 max-w-[180px]">
+                            <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                            <span className="truncate">{sup.email}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-5 px-6 text-right font-bold text-slate-200">
+                        {(sup.materials || []).length} Invoice(s)
+                      </td>
+                      <td className="py-5 px-6 text-right">
+                        <span className={`font-bold ${sup.currentDue > 0 ? 'text-amber-400' : 'text-slate-450'}`}>
+                          {formatCurrencyLocal(sup.currentDue)}
+                        </span>
+                      </td>
+                      {user && user.role !== 'PROJECT_MANAGER' && (
+                        <td className="py-5 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={(e) => handleOpenEdit(sup, e)}
+                              className="p-1.5 text-slate-450 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
+                              title="Edit supplier"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
+                              <button
+                                onClick={(e) => handleDeleteClick(sup.id, e)}
+                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                                title="Delete supplier"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={Math.ceil(totalItems / limit)}
+              totalItems={totalItems}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            />
           </div>
-          <Pagination
-            currentPage={page}
-            totalPages={Math.ceil(totalItems / limit)}
-            totalItems={totalItems}
-            limit={limit}
-            onPageChange={setPage}
-            onLimitChange={(l) => { setLimit(l); setPage(1); }}
-          />
-          </>
         )}
 
         {/* History Drawer */}
@@ -705,9 +712,11 @@ export default function SuppliersPage() {
                               {...register(`assignments.${index}.projectId`)}
                               error={errors.assignments?.[index]?.projectId?.message}
                             >
-                              <option value="" className="bg-slate-900 text-slate-250">Select Project...</option>
+                              <option value="" disabled className="bg-slate-900 text-slate-250">Select Project...</option>
                               {projects.map((p: any) => (
-                                <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">{p.name} ({p.code})</option>
+                                <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                                  {p.code} - {p.name}
+                                </option>
                               ))}
                             </Select>
                           </div>

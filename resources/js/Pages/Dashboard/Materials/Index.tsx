@@ -17,7 +17,7 @@ import { ToastContainer } from '@/Components/ui/ToastContainer';
 import { useToast } from '@/hooks/useToast';
 
 import {
-  PackageSearch, Plus, Search, Truck, FolderKanban, DollarSign, Calendar, Layers, X, Trash2, Loader2, Info
+  PackageSearch, Plus, Search, Truck, FolderKanban, DollarSign, Calendar, Layers, X, Trash2, Edit2, Loader2, Info
 } from 'lucide-react';
 
 const materialSchema = z.object({
@@ -86,7 +86,6 @@ export default function MaterialsPage() {
 
   // Search filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const [projectFilter, setProjectFilter] = useState('ALL');
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -95,6 +94,8 @@ export default function MaterialsPage() {
 
   // Form modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
 
   // Delete confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -139,7 +140,6 @@ export default function MaterialsPage() {
           page,
           limit,
           search: searchTerm,
-          projectId: projectFilter !== 'ALL' ? projectFilter : undefined,
         }
       });
       if (res.data.status === 'success') {
@@ -170,7 +170,7 @@ export default function MaterialsPage() {
 
   useEffect(() => {
     fetchMaterials();
-  }, [page, limit, projectFilter]);
+  }, [page, limit]);
 
   useEffect(() => {
     fetchDependencies();
@@ -194,17 +194,37 @@ export default function MaterialsPage() {
       return;
     }
 
+    setModalMode('create');
+    setSelectedMaterialId(null);
     reset({
       name: '',
       category: '',
       quantity: '',
       unit: '',
       unitPrice: '',
-      supplierId: suppliers[0].id,
+      supplierId: '',
       newSupplierName: '',
-      projectId: projects[0].id,
+      projectId: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       invoiceNumber: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (mat: ApiMaterial) => {
+    setModalMode('edit');
+    setSelectedMaterialId(mat.id);
+    reset({
+      name: mat.name,
+      category: mat.category,
+      quantity: mat.quantity.toString(),
+      unit: mat.unit,
+      unitPrice: mat.unitPrice.toString(),
+      supplierId: mat.supplierId,
+      newSupplierName: '',
+      projectId: mat.projectId,
+      purchaseDate: mat.purchaseDate.split('T')[0],
+      invoiceNumber: mat.invoiceNumber || '',
     });
     setIsModalOpen(true);
   };
@@ -239,10 +259,20 @@ export default function MaterialsPage() {
         quantity: parseFloat(values.quantity),
         unitPrice: parseFloat(values.unitPrice),
       };
-      await handlePromise(axios.post('/api/materials', payload), {
-        successMessage: 'Material purchase logged successfully',
-      });
+      if (modalMode === 'create') {
+        await handlePromise(axios.post('/api/materials', payload), {
+          successMessage: 'Material purchase logged successfully',
+        });
+      } else if (selectedMaterialId) {
+        await handlePromise(axios.patch(`/api/materials/${selectedMaterialId}`, payload), {
+          successMessage: 'Material purchase record updated successfully',
+        });
+      }
       fetchMaterials();
+      // A supplierId of "OTHER" creates a brand-new Supplier server-side;
+      // refresh the dropdown's options so it (and its name) is selectable
+      // the next time this material is opened for edit.
+      fetchDependencies();
       setIsModalOpen(false);
     } catch (err) {
       // ignore
@@ -283,28 +313,13 @@ export default function MaterialsPage() {
           )}
         </div>
 
-        {/* Search + Project Filter */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Input
-            placeholder="Search by material, supplier, project, or category..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            icon={<Search className="h-4 w-4" />}
-            className="flex-1"
-          />
-          <Select
-            value={projectFilter}
-            onChange={(e) => { setProjectFilter(e.target.value); setPage(1); }}
-            className="sm:w-[260px]"
-          >
-            <option value="ALL" className="bg-slate-900 text-slate-200">All Projects</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
-                {p.code} - {p.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {/* Search Filter */}
+        <Input
+          placeholder="Search by material, supplier, project, or category..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          icon={<Search className="h-4 w-4" />}
+        />
 
         {/* Main Table */}
         {isFetching && materials.length === 0 ? (
@@ -341,17 +356,17 @@ export default function MaterialsPage() {
                     <th className="py-4.5 px-4">Qty &amp; Unit Price</th>
                     <th className="py-4.5 px-4">Total Cost</th>
                     <th className="py-4.5 px-4">Date logged</th>
-                    {user && user.role !== 'ACCOUNTANT' && <th className="py-4.5 px-6 text-right">Delete</th>}
+                    {user && user.role !== 'ACCOUNTANT' && <th className="py-4.5 px-6 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 text-xs">
                   {materials.map((mat) => (
                     <tr key={mat.id} className="hover:bg-slate-900/40 transition-colors">
-                      <td className="py-4.5 px-6">
-                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
+                      <td className="py-4.5 px-6 max-w-[220px]">
+                        <span className="block truncate text-[10px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
                           {mat.category}
                         </span>
-                        <h4 className="font-bold text-slate-200 mt-0.5">{mat.name}</h4>
+                        <h4 className="font-bold text-slate-200 mt-0.5 truncate">{mat.name}</h4>
                       </td>
                       <td className="py-4.5 px-4">
                         <div className="flex items-center gap-1.5 max-w-[140px]">
@@ -380,12 +395,22 @@ export default function MaterialsPage() {
                       </td>
                       {user && user.role !== 'ACCOUNTANT' && (
                         <td className="py-4.5 px-6 text-right">
-                          <button
-                            onClick={() => handleDeleteClick(mat.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEdit(mat)}
+                              className="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
+                              title="Edit purchase record"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(mat.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                              title="Delete purchase record"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -411,7 +436,7 @@ export default function MaterialsPage() {
           title={
             <div className="flex items-center gap-2">
               <PackageSearch className="h-4.5 w-4.5 text-cyan-400" />
-              Log Material Purchase Invoice
+              {modalMode === 'create' ? 'Log Material Purchase Invoice' : 'Edit Material Purchase Record'}
             </div>
           }
           size="lg"
@@ -476,7 +501,7 @@ export default function MaterialsPage() {
                   <option value="" disabled className="bg-slate-900 text-slate-250">Select Supplier...</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id} className="bg-slate-900 text-slate-200">
-                      {s.name}
+                      {s.name}{!s.phoneNumber ? ' (Other Entry)' : ''}
                     </option>
                   ))}
                   <option value="OTHER" className="bg-slate-900 text-slate-200">Other...</option>
@@ -501,7 +526,7 @@ export default function MaterialsPage() {
                   <option value="" disabled className="bg-slate-900 text-slate-250">Select Project...</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
-                      {p.name}
+                      {p.code} - {p.name}
                     </option>
                   ))}
                 </Select>
@@ -550,7 +575,7 @@ export default function MaterialsPage() {
                 type="submit"
                 loading={isBusy}
               >
-                Save Record
+                {modalMode === 'create' ? 'Save Record' : 'Update Record'}
               </Button>
             </div>
           </form>

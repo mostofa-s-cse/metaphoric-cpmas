@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CashOut;
 use App\Models\Material;
+use App\Models\ProjectSupplier;
 use App\Models\Supplier;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,8 @@ class MaterialController extends Controller
             'invoiceNumber' => 'nullable|string',
         ]);
 
-        if ($data['supplierId'] === 'OTHER') {
+        $isNewSupplier = $data['supplierId'] === 'OTHER';
+        if ($isNewSupplier) {
             $newSupplier = Supplier::create([
                 'name' => $data['newSupplierName'],
                 'phoneNumber' => '',
@@ -76,7 +78,7 @@ class MaterialController extends Controller
         $total = (float) $data['quantity'] * (float) $data['unitPrice'];
         $data['totalPrice'] = $total;
 
-        [$material, $cashOut] = DB::transaction(function () use ($data, $total) {
+        [$material, $cashOut] = DB::transaction(function () use ($data, $total, $isNewSupplier) {
             $material = Material::create($data);
 
             $cashOut = CashOut::create([
@@ -95,6 +97,19 @@ class MaterialController extends Controller
             $supplier = Supplier::findOrFail($data['supplierId']);
             $supplier->currentDue = (float) $supplier->currentDue + $total;
             $supplier->save();
+
+            // A brand-new ("Other") supplier has no project assignment yet —
+            // link it to the project this purchase was made for, so the
+            // project shows up on its card instead of looking unassigned.
+            if ($isNewSupplier) {
+                ProjectSupplier::create([
+                    'projectId' => $data['projectId'],
+                    'supplierId' => $data['supplierId'],
+                    'contractAmount' => $total,
+                    'paidAmount' => 0,
+                    'dueAmount' => $total,
+                ]);
+            }
 
             return [$material, $cashOut];
         });
@@ -123,11 +138,25 @@ class MaterialController extends Controller
             'quantity' => 'sometimes|numeric|min:0',
             'unit' => 'sometimes|string',
             'unitPrice' => 'sometimes|numeric|min:0',
-            'supplierId' => 'sometimes|uuid|exists:suppliers,id',
+            'supplierId' => 'sometimes|string',
+            'newSupplierName' => 'required_if:supplierId,OTHER|nullable|string',
             'projectId' => 'sometimes|uuid|exists:projects,id',
             'purchaseDate' => 'sometimes|date',
             'invoiceNumber' => 'nullable|string',
         ]);
+
+        if (array_key_exists('supplierId', $data)) {
+            if ($data['supplierId'] === 'OTHER') {
+                $newSupplier = Supplier::create([
+                    'name' => $data['newSupplierName'],
+                    'phoneNumber' => '',
+                ]);
+                $data['supplierId'] = $newSupplier->id;
+            } else {
+                Supplier::findOrFail($data['supplierId']);
+            }
+        }
+        unset($data['newSupplierName']);
 
         // totalPrice is always server-derived, never trusted from the client.
         if (array_key_exists('quantity', $data) || array_key_exists('unitPrice', $data)) {
@@ -136,7 +165,41 @@ class MaterialController extends Controller
             $data['totalPrice'] = (float) $quantity * (float) $unitPrice;
         }
 
-        $material->update($data);
+        DB::transaction(function () use ($material, $data) {
+            $oldSupplierId = $material->supplierId;
+            $oldTotalPrice = (float) $material->totalPrice;
+
+            $material->update($data);
+            $material->refresh();
+
+            // Reconcile the old and new supplier's currentDue against this
+            // purchase, matching the store()/destroy() due-adjustment pattern.
+            if ($oldSupplierId) {
+                $oldSupplier = Supplier::find($oldSupplierId);
+                if ($oldSupplier) {
+                    $oldSupplier->currentDue = (float) $oldSupplier->currentDue - $oldTotalPrice;
+                    $oldSupplier->save();
+                }
+            }
+            if ($material->supplierId) {
+                $newSupplier = Supplier::findOrFail($material->supplierId);
+                $newSupplier->currentDue = (float) $newSupplier->currentDue + (float) $material->totalPrice;
+                $newSupplier->save();
+            }
+
+            // Keep the auto-generated CashOut record in sync with the edited purchase.
+            CashOut::where('materialId', $material->id)->get()->each(function ($cashOut) use ($material) {
+                $cashOut->update([
+                    'date' => $material->purchaseDate,
+                    'projectId' => $material->projectId,
+                    'paidTo' => "Material Purchase: {$material->name}",
+                    'amount' => $material->totalPrice,
+                    'referenceNumber' => $material->invoiceNumber,
+                    'notes' => "Auto-generated from Material Purchase registry. Qty: {$material->quantity} {$material->unit} @ \${$material->unitPrice}/{$material->unit}",
+                    'supplierId' => $material->supplierId,
+                ]);
+            });
+        });
 
         return $this->apiSuccess(['material' => $material->fresh(['supplier', 'project'])],
             'Material updated successfully', self::PATH);

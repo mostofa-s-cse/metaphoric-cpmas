@@ -228,7 +228,7 @@ return new class extends Migration
             $table->text('details')->nullable();
             $table->timestamps();
 
-            $table->index('createdAt');
+            $table->index('created_at');
         });
 
         // 14. Project Vendors

@@ -363,117 +363,115 @@ export default function VendorsPage() {
             </p>
           </div>
         ) : (
-          <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {vendors.map((vnd) => (
-              <div
-                key={vnd.id}
-                onClick={() => handleViewHistory(vnd)}
-                className="bg-slate-900/25 border border-slate-800/80 rounded-2xl p-6 transition-all hover:border-slate-700/85 cursor-pointer flex flex-col justify-between group relative overflow-hidden backdrop-blur-md hover:shadow-xl"
-              >
-                <div>
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
-                    <Hammer className="h-3.5 w-3.5" />
-                    {vnd.workType}
-                  </span>
-                  <h3 className="font-bold text-slate-200 text-sm mt-2.5 group-hover:text-cyan-400 transition-colors">
-                    {vnd.name}
-                  </h3>
-                  {vnd.companyName && (
-                    <p className="text-slate-400 text-xs font-semibold mt-0.5">{vnd.companyName}</p>
-                  )}
-                  {vnd.notes && (
-                    <p className="text-slate-500 text-[11px] mt-2.5 line-clamp-2 leading-relaxed font-medium">
-                      {vnd.notes}
-                    </p>
-                  )}
-
-                  {/* Assigned Projects Badges */}
-                  {vnd.projectAssignments && vnd.projectAssignments.length > 0 && (
-                    <div className="mt-3.5 flex flex-wrap gap-1.5">
-                      {vnd.projectAssignments.map((pa: any) => (
-                        <span
-                          key={pa.id}
-                          className="text-[9px] font-bold px-2 py-1 bg-slate-950/80 border border-slate-850 text-slate-400 rounded-lg uppercase tracking-wider font-mono hover:text-cyan-400 transition-colors"
-                          title={`${pa.project?.name || ''} (Contract: ${formatCurrencyLocal(pa.contractAmount)})`}
-                        >
-                          {pa.project?.code || pa.project?.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 border-t border-slate-800/80 pt-4 space-y-2.5">
-                  <div className="flex items-center text-[11px] text-slate-400 gap-2">
-                    <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                    <span>{vnd.contactNumber}</span>
-                  </div>
-                  {vnd.address && (
-                    <div className="flex items-center text-[11px] text-slate-400 gap-2">
-                      <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">{vnd.address}</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-2 border-t border-slate-800/40 pt-3 text-center text-[10px] font-medium">
-                    <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
-                      <span className="text-slate-550 block text-[9px] uppercase tracking-wider">Total Contract</span>
-                      <span className="text-slate-200 font-bold block mt-0.5">
-                        {formatCurrencyLocal(vnd.contractAmount)}
-                      </span>
-                    </div>
-                    <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
-                      <span className="text-slate-550 block text-[9px] uppercase tracking-wider">Total Paid</span>
-                      <span className="text-emerald-400 font-bold block mt-0.5">
-                        {formatCurrencyLocal(vnd.paidAmount)}
-                      </span>
-                    </div>
-                    <div className="p-1.5 bg-slate-950/30 border border-slate-800 rounded-xl">
-                      <span className="text-slate-550 block text-[9px] uppercase tracking-wider">Total Due</span>
-                      <span
-                        className={`font-bold block mt-0.5 ${
-                          vnd.dueAmount > 0 ? 'text-amber-400' : 'text-slate-500'
-                        }`}
-                      >
-                        {formatCurrencyLocal(vnd.dueAmount)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {user && !['ACCOUNTANT', 'DATA_ENTRY_OPERATOR'].includes(user.role) && (
-                  <div className="mt-4 pt-3 border-t border-slate-800/40 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => handleOpenEdit(vnd, e)}
-                      className="p-2 text-slate-450 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
-                      title="Edit vendor"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
-                      <button
-                        onClick={(e) => handleDeleteClick(vnd.id, e)}
-                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
-                        title="Delete vendor"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+          <div className="bg-slate-900/25 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md animate-in fade-in duration-300">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <th className="py-5 px-6">Vendor</th>
+                    <th className="py-5 px-6">Projects Assigned</th>
+                    <th className="py-5 px-6">Contact</th>
+                    <th className="py-5 px-6 text-right">Total Contract</th>
+                    <th className="py-5 px-6 text-right">Total Paid</th>
+                    <th className="py-5 px-6 text-right">Total Due</th>
+                    {user && !['ACCOUNTANT', 'DATA_ENTRY_OPERATOR'].includes(user.role) && (
+                      <th className="py-5 px-6 text-right">Actions</th>
                     )}
-                  </div>
-                )}
-              </div>
-            ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-xs">
+                  {vendors.map((vnd) => (
+                    <tr
+                      key={vnd.id}
+                      onClick={() => handleViewHistory(vnd)}
+                      className="hover:bg-slate-900/40 transition-colors cursor-pointer"
+                    >
+                      <td className="py-5 px-6 max-w-[220px]">
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                          <Hammer className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{vnd.workType}</span>
+                        </span>
+                        <h4 className="font-bold text-slate-200 mt-0.5 truncate">{vnd.name}</h4>
+                        {vnd.companyName && (
+                          <p className="text-slate-400 text-[11px] font-semibold mt-0.5 truncate">{vnd.companyName}</p>
+                        )}
+                      </td>
+                      <td className="py-5 px-6 max-w-[200px]">
+                        {vnd.projectAssignments && vnd.projectAssignments.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {vnd.projectAssignments.map((pa: any) => (
+                              <span
+                                key={pa.id}
+                                className="text-[9px] font-bold px-2 py-1 bg-slate-950/80 border border-slate-850 text-slate-400 rounded-lg uppercase tracking-wider font-mono hover:text-cyan-400 transition-colors"
+                                title={`${pa.project?.name || ''} (Contract: ${formatCurrencyLocal(pa.contractAmount)})`}
+                              >
+                                {pa.project?.code || pa.project?.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="py-5 px-6 text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                          <span>{vnd.contactNumber}</span>
+                        </div>
+                        {vnd.address && (
+                          <div className="flex items-center gap-1.5 mt-1 max-w-[180px]">
+                            <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                            <span className="truncate">{vnd.address}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-5 px-6 text-right font-bold text-slate-200">
+                        {formatCurrencyLocal(vnd.contractAmount)}
+                      </td>
+                      <td className="py-5 px-6 text-right font-bold text-emerald-400">
+                        {formatCurrencyLocal(vnd.paidAmount)}
+                      </td>
+                      <td className="py-5 px-6 text-right">
+                        <span className={`font-bold ${vnd.dueAmount > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                          {formatCurrencyLocal(vnd.dueAmount)}
+                        </span>
+                      </td>
+                      {user && !['ACCOUNTANT', 'DATA_ENTRY_OPERATOR'].includes(user.role) && (
+                        <td className="py-5 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={(e) => handleOpenEdit(vnd, e)}
+                              className="p-1.5 text-slate-450 hover:text-cyan-400 hover:bg-cyan-500/5 rounded-lg border border-transparent hover:border-cyan-500/10 transition-all cursor-pointer"
+                              title="Edit vendor"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
+                              <button
+                                onClick={(e) => handleDeleteClick(vnd.id, e)}
+                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-lg border border-transparent hover:border-rose-500/10 transition-all cursor-pointer"
+                                title="Delete vendor"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={Math.ceil(totalItems / limit)}
+              totalItems={totalItems}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            />
           </div>
-          <Pagination
-            currentPage={page}
-            totalPages={Math.ceil(totalItems / limit)}
-            totalItems={totalItems}
-            limit={limit}
-            onPageChange={setPage}
-            onLimitChange={(l) => { setLimit(l); setPage(1); }}
-          />
-          </>
         )}
 
         {/* History Drawer */}
@@ -494,7 +492,7 @@ export default function VendorsPage() {
           size="md"
         >
           {selectedVendor && (
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="space-y-6">
                 {/* Project-wise Billings */}
                 <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/30">
                   <h3 className="text-xs font-bold text-slate-350 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">

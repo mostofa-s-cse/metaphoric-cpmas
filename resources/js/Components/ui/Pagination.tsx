@@ -31,6 +31,9 @@ export function Pagination({
     }
   };
 
+  // Nothing to paginate — everything already fits on one page.
+  if (totalItems <= limit) return null;
+
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-6 border-t border-slate-800 bg-slate-950/20 text-xs text-slate-400 select-none">
       {/* Left side: Rows per page selector */}

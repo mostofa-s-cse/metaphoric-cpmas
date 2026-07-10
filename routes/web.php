@@ -85,6 +85,11 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
     Route::middleware('role:SUPER_ADMIN')->group(function () {
         Route::get('/users', [UserController::class, 'page'])->name('dashboard.users');
         Route::get('/reports', [ReportController::class, 'page'])->name('dashboard.reports');
+        Route::get('/reports/projects', [ReportController::class, 'projectsPage'])->name('dashboard.reports.projects');
+        Route::get('/reports/vendors', [ReportController::class, 'vendorsPage'])->name('dashboard.reports.vendors');
+        Route::get('/reports/suppliers', [ReportController::class, 'suppliersPage'])->name('dashboard.reports.suppliers');
+        Route::get('/reports/materials', [ReportController::class, 'materialsPage'])->name('dashboard.reports.materials');
+        Route::get('/reports/employees', [ReportController::class, 'employeesPage'])->name('dashboard.reports.employees');
     });
 });
 

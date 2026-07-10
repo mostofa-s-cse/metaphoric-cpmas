@@ -24,7 +24,7 @@ class EmployeeController extends Controller
         $limit = (int) $request->get('limit', 10);
         $skip = ($page - 1) * $limit;
 
-        $query = Employee::query();
+        $query = Employee::with('salaries');
         if ($search) {
             $query->where('fullName', 'like', "%{$search}%")
                   ->orWhere('designation', 'like', "%{$search}%")
