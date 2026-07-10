@@ -5,8 +5,9 @@
 # The new build already landed at "$DEPLOY_DIR.incoming" (rsynced by the
 # workflow). This script swaps it into place, runs pending Prisma migrations
 # against the local Postgres using the pre-resolved prisma-toolkit (no install
-# on server), and restarts the app via Passenger's tmp/restart.txt convention.
-# Rolls back on migration failure only -- no post-restart healthcheck.
+# on server), and restarts the app by killing the supervised "node server.js"
+# process -- the panel auto-restarts it (Automatic/Production mode), it's not
+# Passenger. Rolls back on migration failure only -- no post-restart healthcheck.
 #
 # Never touches public/uploads/ (local file storage) or .env (managed
 # manually on the server) -- both are carried forward untouched on every
@@ -27,8 +28,17 @@ if [ ! -d "$INCOMING_DIR" ]; then
 fi
 
 restart_app() {
-  mkdir -p "$DEPLOY_DIR/tmp"
-  touch "$DEPLOY_DIR/tmp/restart.txt"
+  # This panel isn't Passenger -- it runs the configured Startup command
+  # ("node server.js") as a supervised process in the app's working directory
+  # and auto-restarts it if it exits. Kill it by matching cwd (not port, which
+  # isn't guaranteed) and let the supervisor bring it back up with the new code.
+  local pid target_dir
+  target_dir=$(readlink -f "$DEPLOY_DIR")
+  for pid in $(pgrep -f "node .*server\.js" 2>/dev/null || true); do
+    if [ "$(readlink -f "/proc/$pid/cwd" 2>/dev/null)" = "$target_dir" ]; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
 }
 
 find_node() {
