@@ -4,24 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\CashIn;
 use App\Models\CashOut;
+use App\Models\Project;
 use App\Models\ProjectVendor;
 use App\Models\Supplier;
 use App\Models\Vendor;
 use App\Traits\ApiResponse;
+use App\Traits\HasMainBalance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class TransactionController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HasMainBalance;
 
     const PATH_IN = '/transactions/cash-in';
     const PATH_OUT = '/transactions/cash-out';
 
     // Source-of-truth enum lists (must match the Next.js original's dropdown options).
     const CASH_IN_SOURCES = 'SIGNING_AGREEMENT,MATERIAL_PREPS,LABER_PREPS,RUNNING_BILL,FINAL_BILL,CLIENT_PAYMENT,ADVANCE_PAYMENT,INSTALLMENT,OTHER_INCOME';
-    const CASH_OUT_CATEGORIES = 'SIGNING_AGREEMENT,MATERIAL_PREPS,LABER_PREPS,RUNNING_BILL,FINAL_BILL,MATERIALS,LABOR,VENDOR_PAYMENT,OFFICE_RENT,UTILITIES,TRANSPORTATION,FUEL,EQUIPMENT_RENTAL,MISCELLANEOUS';
+    const CASH_OUT_CATEGORIES = 'SIGNING_AGREEMENT,MATERIAL_PREPS,LABER_PREPS,RUNNING_BILL,FINAL_BILL,MATERIALS,LABOR,VENDOR_PAYMENT,OFFICE_RENT,UTILITIES,TRANSPORTATION,FUEL,EQUIPMENT_RENTAL,EMPLOYEE_SALARY,MISCELLANEOUS';
 
     // ─── Cash In ──────────────────────────────────────────────────────────────
 
@@ -145,12 +147,21 @@ class TransactionController extends Controller
             'salaryId' => 'nullable|uuid|exists:salaries,id',
         ]);
 
-        $cashOut = CashOut::create($data);
-
         $amount = (float) $data['amount'];
         $vendorId = $data['vendorId'] ?? null;
         $supplierId = $data['supplierId'] ?? null;
         $projectId = $data['projectId'] ?? null;
+        $category = $data['expenseCategory'];
+
+        $available = $this->availableBalance($projectId, $category);
+        if ($amount > $available) {
+            return $this->apiBadRequest(
+                $this->insufficientBalanceMessage($available, $projectId, $category),
+                self::PATH_OUT
+            );
+        }
+
+        $cashOut = CashOut::create($data);
 
         // Sync vendor balance if this cash-out is a vendor payment
         if ($vendorId) {
@@ -200,6 +211,18 @@ class TransactionController extends Controller
             'referenceNumber' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
+
+        $newAmount = isset($data['amount']) ? (float) $data['amount'] : (float) $cashOut->amount;
+        $newProjectId = array_key_exists('projectId', $data) ? $data['projectId'] : $cashOut->projectId;
+        $newCategory = $data['expenseCategory'] ?? $cashOut->expenseCategory;
+
+        $available = $this->availableBalance($newProjectId, $newCategory, $cashOut->id);
+        if ($newAmount > $available) {
+            return $this->apiBadRequest(
+                $this->insufficientBalanceMessage($available, $newProjectId, $newCategory),
+                self::PATH_OUT
+            );
+        }
 
         $cashOut->update($data);
 
@@ -290,13 +313,65 @@ class TransactionController extends Controller
         $cashInTotal = (float) $cashIns->sum('amount');
         $cashOutTotal = (float) $cashOuts->sum('amount');
 
+        $summary = [
+            'cashIn' => ['total' => $cashInTotal, 'byMode' => $cashInByMode],
+            'cashOut' => ['total' => $cashOutTotal, 'byMode' => $cashOutByMode],
+            'net' => $cashInTotal - $cashOutTotal,
+        ];
+
+        $config = $this->mainBalanceConfig();
+
+        // Main balance (configured % of all project budgets) always shows, regardless of filter.
+        $summary['mainBalance'] = [
+            'allocated' => (float) Project::all()->sum('estimatedBudget') * $config['percentage'],
+            'available' => $this->availableBalance(null),
+            'percentage' => round($config['percentage'] * 100, 2),
+        ];
+
+        if ($projectId && $projectId !== 'GENERAL') {
+            $project = Project::find($projectId);
+            if ($project) {
+                $summary['projectBalance'] = [
+                    'allocated' => (float) $project->estimatedBudget * (1 - $config['percentage']),
+                    'available' => $this->availableBalance($projectId),
+                    'percentage' => round((1 - $config['percentage']) * 100, 2),
+                ];
+            }
+        }
+
+        return $this->apiSuccess(['summary' => $summary],
+            'Transaction summary retrieved', '/transactions/summary');
+    }
+
+    /**
+     * Tells a form, before submit, exactly which pool a prospective expense
+     * will draw from (main balance or the linked project's own share) and
+     * how much is available — the same rule storeCashOut/updateCashOut will
+     * enforce, so payment forms (salary, office expense, labour wage, ...)
+     * can show a single accurate figure instead of guessing client-side.
+     */
+    public function availableBalanceInfo(Request $request)
+    {
+        $projectId = $request->get('projectId');
+        $projectId = ($projectId === 'GENERAL' || !$projectId) ? null : $projectId;
+        $category = $request->get('category');
+
+        $config = $this->mainBalanceConfig();
+        $drawsFromMain = !$projectId || $this->isMainBalanceCategory($category, $config);
+
+        $allocated = $drawsFromMain
+            ? (float) Project::all()->sum('estimatedBudget') * $config['percentage']
+            : (float) Project::findOrFail($projectId)->estimatedBudget * (1 - $config['percentage']);
+
+        $available = $this->availableBalance($projectId, $category);
+
         return $this->apiSuccess([
-            'summary' => [
-                'cashIn' => ['total' => $cashInTotal, 'byMode' => $cashInByMode],
-                'cashOut' => ['total' => $cashOutTotal, 'byMode' => $cashOutByMode],
-                'net' => $cashInTotal - $cashOutTotal,
-            ],
-        ], 'Transaction summary retrieved', '/transactions/summary');
+            'source' => $drawsFromMain ? 'main' : 'project',
+            'allocated' => $allocated,
+            'available' => $available,
+            'spent' => $allocated - $available,
+            'percentage' => round(($drawsFromMain ? $config['percentage'] : 1 - $config['percentage']) * 100, 2),
+        ], 'Available balance retrieved', '/transactions/available-balance');
     }
 
     public function page()

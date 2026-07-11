@@ -348,6 +348,7 @@ export default function EmployeesPage() {
       referenceNumber: '',
       notes: '',
     });
+    fetchAvailableBalance(null, 'EMPLOYEE_SALARY');
     setIsSalaryModalOpen(true);
   };
 
@@ -357,25 +358,33 @@ export default function EmployeesPage() {
     setIsSalaryHistoryOpen(true);
   };
 
-  // Main Balance = 30% of the combined estimated budget across EVERY project —
-  // one shared, company-wide pool (not per-project). Employee salaries,
-  // office expenses, and labour wages all draw down this same balance,
-  // regardless of which project each payment is attributed to.
-  const getMainBalance = () => {
-    const mainBalance = projects.reduce((sum: number, p: any) => sum + (p.estimatedBudget || 0), 0) * 0.3;
-    const spentSalary = allEmployees.reduce((sum: number, e: any) => {
-      const empSpent = (e.salaries || []).reduce((s: number, sal: any) => s + (sal.paidAmount || 0), 0);
-      return sum + empSpent;
-    }, 0);
-    const spentExpense = officeCashOuts.reduce((s: number, co: any) => s + (co.amount || 0), 0);
-    const spentLabourWages = allCashOuts
-      .filter((co: any) => co.expenseCategory === 'LABOR')
-      .reduce((s: number, co: any) => s + (co.amount || 0), 0);
-    const spent = spentSalary + spentExpense + spentLabourWages;
-    return { mainBalance, spentSalary, spentExpense, spentLabourWages, spent, remaining: mainBalance - spent };
+  // Which pool (Main Balance or the selected project's own share) a
+  // prospective payment will draw from, and how much is available — fetched
+  // live from the backend so it always matches the admin-configured
+  // percentage/category rules in Settings > Main Balance, and the exact
+  // amount storeCashOut/processSalary will enforce on submit.
+  const [balanceInfo, setBalanceInfo] = useState<{
+    source: 'main' | 'project'; allocated: number; available: number; spent: number; percentage: number;
+  } | null>(null);
+
+  const fetchAvailableBalance = async (projectId: string | null, category: string) => {
+    try {
+      const res = await axios.get('/api/transactions/available-balance', {
+        params: { projectId: projectId || undefined, category },
+      });
+      if (res.data.status === 'success') {
+        setBalanceInfo(res.data.data);
+      }
+    } catch (err) {
+      // ignore
+    }
   };
 
-  const mainBalanceInfo = getMainBalance();
+  useEffect(() => {
+    if (isExpenseModalOpen && expenseFormData.projectId) {
+      fetchAvailableBalance(expenseFormData.projectId, expenseFormData.expenseCategory);
+    }
+  }, [isExpenseModalOpen, expenseFormData.projectId, expenseFormData.expenseCategory]);
 
   const handleDisburseSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -463,12 +472,18 @@ export default function EmployeesPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  const BalanceWidget = ({ info }: { info: ReturnType<typeof getMainBalance> }) => {
+  const BalanceWidget = ({ info }: { info: typeof balanceInfo }) => {
+    if (!info) {
+      return <div className="mt-2 text-[10px] text-slate-600">Loading balance...</div>;
+    }
+    const label = info.source === 'main'
+      ? `Main Balance (All Projects, ${info.percentage}%)`
+      : `Project Balance (${info.percentage}% of budget)`;
     return (
       <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
         <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
-          <span className="text-slate-550 block text-[9px] uppercase">Main Balance (All Projects)</span>
-          <span className="text-slate-200 font-bold">{formatCurrencyLocal(info.mainBalance)}</span>
+          <span className="text-slate-550 block text-[9px] uppercase">{label}</span>
+          <span className="text-slate-200 font-bold">{formatCurrencyLocal(info.allocated)}</span>
         </div>
         <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
           <span className="text-slate-550 block text-[9px] uppercase">Spent</span>
@@ -476,8 +491,8 @@ export default function EmployeesPage() {
         </div>
         <div className="p-1.5 bg-slate-950/40 border border-cyan-500/20 rounded-lg">
           <span className="text-slate-550 block text-[9px] uppercase">Remaining</span>
-          <span className={`font-bold ${info.remaining >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
-            {formatCurrencyLocal(info.remaining)}
+          <span className={`font-bold ${info.available >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+            {formatCurrencyLocal(info.available)}
           </span>
         </div>
       </div>
@@ -972,7 +987,7 @@ export default function EmployeesPage() {
                   </option>
                 ))}
               </Select>
-              <BalanceWidget info={mainBalanceInfo} />
+              <BalanceWidget info={balanceInfo} />
             </div>
 
             <div>
@@ -1083,7 +1098,7 @@ export default function EmployeesPage() {
 
               <div>
                 <label className="block text-slate-450 text-xs font-semibold mb-2">Company-wide Main Balance</label>
-                <BalanceWidget info={mainBalanceInfo} />
+                <BalanceWidget info={balanceInfo} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

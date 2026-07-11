@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
   FolderKanban, Play, CheckCircle2, Users2, Truck, Briefcase, HardHat,
   ArrowUpRight, ArrowDownRight, Coins, AlertTriangle, TrendingUp, TrendingDown,
-  Wallet, CircleDollarSign, UserCheck,
+  Wallet, CircleDollarSign, UserCheck, PiggyBank,
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -23,6 +23,7 @@ interface Summary {
   totalEmployees: number; totalLabour: number; totalCashIn: number;
   totalCashOut: number; netProfit: number; supplierDue: number;
   vendorDue: number; salaryDue: number; cashBalance: number;
+  mainBalance: number; mainBalanceAllocated: number; mainBalancePercentage: number;
 }
 
 interface Props {
@@ -52,6 +53,7 @@ export default function DashboardIndex({ summary, expenseBreakdown, monthlyTrend
     { title: 'Total Cash Out',     value: formatCurrency(summary.totalCashOut),desc: 'Accumulated spending',     icon: ArrowDownRight,  color: 'text-rose-400 border-rose-500/20 bg-rose-500/5',       roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DATA_ENTRY_OPERATOR'] },
     { title: 'Net Profit',         value: formatCurrency(summary.netProfit),  desc: 'Revenue minus cost',         icon: TrendingUp,      color: 'text-cyan-400 border-cyan-500/20 bg-cyan-500/5',      roles: ['SUPER_ADMIN'] },
     { title: 'Cash Balance',       value: formatCurrency(summary.cashBalance), desc: 'Current cash in hand',     icon: Wallet,          color: 'text-teal-400 border-teal-500/20 bg-teal-500/5',       roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DATA_ENTRY_OPERATOR'] },
+    { title: 'Main Balance',       value: formatCurrency(summary.mainBalance), desc: `${summary.mainBalancePercentage}% of all project budgets (${formatCurrency(summary.mainBalanceAllocated)})`, icon: PiggyBank, color: 'text-amber-400 border-amber-500/20 bg-amber-500/5', roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DATA_ENTRY_OPERATOR'] },
     { title: 'Supplier Due',       value: formatCurrency(summary.supplierDue), desc: 'Unpaid bills',             icon: Coins,           color: 'text-amber-400 border-amber-500/20 bg-amber-500/5',    roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DATA_ENTRY_OPERATOR'] },
     { title: 'Vendor Due',         value: formatCurrency(summary.vendorDue),  desc: 'Pending milestones',        icon: AlertTriangle,   color: 'text-red-400 border-red-500/20 bg-red-500/5',          roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'] },
     { title: 'Salary Due',         value: formatCurrency(summary.salaryDue),  desc: 'Employee unpaid salary',    icon: CircleDollarSign,color: 'text-fuchsia-400 border-fuchsia-500/20 bg-fuchsia-500/5',roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'PROJECT_MANAGER', 'DATA_ENTRY_OPERATOR'] },

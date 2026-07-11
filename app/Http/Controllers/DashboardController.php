@@ -10,11 +10,14 @@ use App\Models\Project;
 use App\Models\Salary;
 use App\Models\Supplier;
 use App\Models\Vendor;
+use App\Traits\HasMainBalance;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    use HasMainBalance;
+
     public function index()
     {
         $user = Auth::user();
@@ -36,6 +39,9 @@ class DashboardController extends Controller
             'vendorDue'         => 0,
             'salaryDue'         => 0,
             'cashBalance'       => 0,
+            'mainBalance'       => 0,
+            'mainBalanceAllocated' => 0,
+            'mainBalancePercentage' => 30,
             'monthlyRevenue'    => 0,
             'monthlyExpenses'   => 0,
         ];
@@ -65,6 +71,15 @@ class DashboardController extends Controller
             $summary['totalCashOut'] = (float) $cashOuts->sum('amount');
             $summary['cashBalance']  = $summary['totalCashIn'] - $summary['totalCashOut'];
             $summary['netProfit']    = $summary['cashBalance'];
+
+            // Main balance: admin-configured % of all project budgets (default 30%,
+            // see Settings > Main Balance Configuration), minus expenses booked with
+            // no project plus any expense whose category is configured to always
+            // draw from main balance.
+            $mainBalanceConfig = $this->mainBalanceConfig();
+            $summary['mainBalancePercentage'] = round($mainBalanceConfig['percentage'] * 100, 2);
+            $summary['mainBalanceAllocated'] = (float) $projects->sum('estimatedBudget') * $mainBalanceConfig['percentage'];
+            $summary['mainBalance'] = $this->availableBalance(null);
 
             // Dues (encrypted columns must be summed in PHP, not via SQL aggregate)
             $summary['supplierDue'] = (float) Supplier::all()->sum('currentDue');
@@ -129,6 +144,8 @@ class DashboardController extends Controller
             $summary['supplierDue']  = 20400;
             $summary['vendorDue']    = 250000;
             $summary['salaryDue']    = 4500;
+            $summary['mainBalanceAllocated'] = 3060000;
+            $summary['mainBalance']  = 3060000;
 
             $expenseBreakdown = [
                 ['category' => 'MATERIALS',       'value' => 520000],

@@ -89,6 +89,8 @@ interface TransactionSummary {
   cashIn: { total: number; byMode: Record<string, number> };
   cashOut: { total: number; byMode: Record<string, number> };
   net: number;
+  mainBalance?: { allocated: number; available: number; percentage: number };
+  projectBalance?: { allocated: number; available: number; percentage: number };
 }
 
 export default function TransactionsPage() {
@@ -402,7 +404,7 @@ export default function TransactionsPage() {
         {/* Cash Flow Summary */}
         {summary && (
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
                 <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Total Cash In</span>
                 <span className="text-base font-bold text-emerald-400 flex items-center gap-1.5">
@@ -423,6 +425,28 @@ export default function TransactionsPage() {
                   {formatCurrencyLocal(summary.net)}
                 </span>
               </div>
+              {summary.mainBalance && (
+                <div className="p-4 bg-slate-950/40 border border-amber-500/20 rounded-xl">
+                  <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Main Balance Available</span>
+                  <span className={`text-base font-bold ${summary.mainBalance.available >= 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    {formatCurrencyLocal(summary.mainBalance.available)}
+                  </span>
+                  <span className="block text-[10px] text-slate-600 mt-0.5">
+                    {summary.mainBalance.percentage}% of all project budgets ({formatCurrencyLocal(summary.mainBalance.allocated)})
+                  </span>
+                </div>
+              )}
+              {summary.projectBalance && (
+                <div className="p-4 bg-slate-950/40 border border-amber-500/20 rounded-xl">
+                  <span className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Project Balance Available</span>
+                  <span className={`text-base font-bold ${summary.projectBalance.available >= 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    {formatCurrencyLocal(summary.projectBalance.available)}
+                  </span>
+                  <span className="block text-[10px] text-slate-600 mt-0.5">
+                    {summary.projectBalance.percentage}% of project budget ({formatCurrencyLocal(summary.projectBalance.allocated)})
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-800/60">
@@ -705,8 +729,8 @@ export default function TransactionsPage() {
                   error={cashInErrors.source?.message}
                 >
                   <option value="SIGNING_AGREEMENT" className="bg-slate-900 text-slate-200">Signing Agreement</option>
-                  <option value="MATERIAL_PREPS" className="bg-slate-900 text-slate-200">Material preps</option>
-                  <option value="LABER_PREPS" className="bg-slate-900 text-slate-200">Laber preps</option>
+                  <option value="MATERIAL_PREPS" className="bg-slate-900 text-slate-200">Material Purpose</option>
+                  <option value="LABER_PREPS" className="bg-slate-900 text-slate-200">Labor Purpose</option>
                   <option value="RUNNING_BILL" className="bg-slate-900 text-slate-200">Running Bill</option>
                   <option value="FINAL_BILL" className="bg-slate-900 text-slate-200">Final Bill</option>
                   <option value="CLIENT_PAYMENT" className="bg-slate-900 text-slate-200">Client Progress Invoice</option>
@@ -841,13 +865,14 @@ export default function TransactionsPage() {
                   error={cashOutErrors.expenseCategory?.message}
                 >
                   <option value="SIGNING_AGREEMENT" className="bg-slate-900 text-slate-200">Signing Agreement</option>
-                  <option value="MATERIAL_PREPS" className="bg-slate-900 text-slate-200">Material preps</option>
-                  <option value="LABER_PREPS" className="bg-slate-900 text-slate-200">Laber preps</option>
+                  <option value="MATERIAL_PREPS" className="bg-slate-900 text-slate-200">Material Purpose</option>
+                  <option value="LABER_PREPS" className="bg-slate-900 text-slate-200">Labor Purpose</option>
                   <option value="RUNNING_BILL" className="bg-slate-900 text-slate-200">Running Bill</option>
                   <option value="FINAL_BILL" className="bg-slate-900 text-slate-200">Final Bill</option>
                   <option value="MATERIALS" className="bg-slate-900 text-slate-200">Raw Materials Purchase</option>
                   <option value="LABOR" className="bg-slate-900 text-slate-200">Site Labor Daily Wages</option>
                   <option value="VENDOR_PAYMENT" className="bg-slate-900 text-slate-200">Vendor Payment Milestone</option>
+                  <option value="EMPLOYEE_SALARY" className="bg-slate-900 text-slate-200">Employee Salary</option>
                   <option value="OFFICE_RENT" className="bg-slate-900 text-slate-200">Office Rent</option>
                   <option value="UTILITIES" className="bg-slate-900 text-slate-200">Electricity &amp; Internet Utilities</option>
                   <option value="TRANSPORTATION" className="bg-slate-900 text-slate-200">Transportation</option>

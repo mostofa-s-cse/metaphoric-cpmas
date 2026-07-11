@@ -171,6 +171,7 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
 
     // Transactions (Cash In / Cash Out)
     Route::get('/transactions/summary', [TransactionController::class, 'summary']);
+    Route::get('/transactions/available-balance', [TransactionController::class, 'availableBalanceInfo']);
 
     Route::get('/transactions/cash-in', [TransactionController::class, 'indexCashIn']);
     Route::post('/transactions/cash-in', [TransactionController::class, 'storeCashIn']);

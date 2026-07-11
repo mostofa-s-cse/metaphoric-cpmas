@@ -22,11 +22,6 @@ import {
   CreditCard, History,
 } from 'lucide-react';
 
-// Must match the office-expense categories used on the Office Management page —
-// together with employee salaries and labour wages, these draw down the same
-// company-wide Main Balance (30% of every project's combined budget).
-const OFFICE_CATEGORY_KEYS = ['OFFICE_RENT', 'UTILITIES', 'TRANSPORTATION', 'FUEL', 'EQUIPMENT_RENTAL', 'MISCELLANEOUS'];
-
 const labourSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   phoneNumber: z.string().min(5, 'Phone number is required'),
@@ -88,10 +83,7 @@ export default function LaboursPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [labourToDelete, setLabourToDelete] = useState<string | null>(null);
 
-  // Main Balance inputs — every employee (with salaries) and every cash-out,
-  // fetched in full so the global 30%-of-all-project-budgets balance can be
-  // computed the same way as on the Office Management page.
-  const [allEmployees, setAllEmployees] = useState<any[]>([]);
+  // Every cash-out, fetched in full for the per-labour "total paid" figure.
   const [allCashOuts, setAllCashOuts] = useState<any[]>([]);
 
   // Pay Wage modal
@@ -156,17 +148,6 @@ export default function LaboursPage() {
     }
   };
 
-  const fetchAllEmployees = async () => {
-    try {
-      const res = await axios.get('/api/employees', { params: { limit: 1000 } });
-      if (res.data.status === 'success') {
-        setAllEmployees(res.data.data.employees || []);
-      }
-    } catch (err) {
-      // silent
-    }
-  };
-
   const fetchAllCashOuts = async () => {
     try {
       const res = await axios.get('/api/transactions/cash-out', { params: { limit: 1000 } });
@@ -222,7 +203,6 @@ export default function LaboursPage() {
   }, [labPage, labLimit]);
 
   useEffect(() => {
-    fetchAllEmployees();
     fetchAllCashOuts();
   }, []);
 
@@ -385,45 +365,60 @@ export default function LaboursPage() {
     }
   };
 
-  // Main Balance = 30% of the combined estimated budget across EVERY
-  // project — one shared, company-wide pool. Employee salaries, office
-  // expenses, and labour wages all draw down this same balance.
-  const getMainBalance = () => {
-    const mainBalance = projects.reduce((sum: number, p: any) => sum + (p.estimatedBudget || 0), 0) * 0.3;
-    const spentSalary = allEmployees.reduce((sum: number, e: any) => {
-      const empSpent = (e.salaries || []).reduce((s: number, sal: any) => s + (sal.paidAmount || 0), 0);
-      return sum + empSpent;
-    }, 0);
-    const spentExpense = allCashOuts
-      .filter((co: any) => OFFICE_CATEGORY_KEYS.includes(co.expenseCategory))
-      .reduce((s: number, co: any) => s + (co.amount || 0), 0);
-    const spentLabourWages = allCashOuts
-      .filter((co: any) => co.expenseCategory === 'LABOR')
-      .reduce((s: number, co: any) => s + (co.amount || 0), 0);
-    const spent = spentSalary + spentExpense + spentLabourWages;
-    return { mainBalance, spentSalary, spentExpense, spentLabourWages, spent, remaining: mainBalance - spent };
+  // Which pool (Main Balance or the selected project's own share) a
+  // prospective wage payment will draw from, and how much is available —
+  // fetched live from the backend so it matches the admin-configured
+  // percentage/category rules in Settings > Main Balance, and the exact
+  // amount storeCashOut will enforce on submit.
+  const [balanceInfo, setBalanceInfo] = useState<{
+    source: 'main' | 'project'; allocated: number; available: number; spent: number; percentage: number;
+  } | null>(null);
+
+  const fetchAvailableBalance = async (projectId: string | null, category: string) => {
+    try {
+      const res = await axios.get('/api/transactions/available-balance', {
+        params: { projectId: projectId || undefined, category },
+      });
+      if (res.data.status === 'success') {
+        setBalanceInfo(res.data.data);
+      }
+    } catch (err) {
+      // ignore
+    }
   };
 
-  const mainBalanceInfo = getMainBalance();
+  useEffect(() => {
+    if (isWageModalOpen && wageFormData.projectId) {
+      fetchAvailableBalance(wageFormData.projectId, 'LABOR');
+    }
+  }, [isWageModalOpen, wageFormData.projectId]);
 
-  const BalanceWidget = ({ info }: { info: ReturnType<typeof getMainBalance> }) => (
-    <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
-      <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
-        <span className="text-slate-550 block text-[9px] uppercase">Main Balance (All Projects)</span>
-        <span className="text-slate-200 font-bold">{formatCurrencyLocal(info.mainBalance)}</span>
+  const BalanceWidget = ({ info }: { info: typeof balanceInfo }) => {
+    if (!info) {
+      return <div className="mt-2 text-[10px] text-slate-600">Loading balance...</div>;
+    }
+    const label = info.source === 'main'
+      ? `Main Balance (All Projects, ${info.percentage}%)`
+      : `Project Balance (${info.percentage}% of budget)`;
+    return (
+      <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
+        <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
+          <span className="text-slate-550 block text-[9px] uppercase">{label}</span>
+          <span className="text-slate-200 font-bold">{formatCurrencyLocal(info.allocated)}</span>
+        </div>
+        <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
+          <span className="text-slate-550 block text-[9px] uppercase">Spent</span>
+          <span className="text-rose-400 font-bold">{formatCurrencyLocal(info.spent)}</span>
+        </div>
+        <div className="p-1.5 bg-slate-950/40 border border-cyan-500/20 rounded-lg">
+          <span className="text-slate-550 block text-[9px] uppercase">Remaining</span>
+          <span className={`font-bold ${info.available >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+            {formatCurrencyLocal(info.available)}
+          </span>
+        </div>
       </div>
-      <div className="p-1.5 bg-slate-950/40 border border-slate-800 rounded-lg">
-        <span className="text-slate-550 block text-[9px] uppercase">Spent</span>
-        <span className="text-rose-400 font-bold">{formatCurrencyLocal(info.spent)}</span>
-      </div>
-      <div className="p-1.5 bg-slate-950/40 border border-cyan-500/20 rounded-lg">
-        <span className="text-slate-550 block text-[9px] uppercase">Remaining</span>
-        <span className={`font-bold ${info.remaining >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
-          {formatCurrencyLocal(info.remaining)}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const formatCurrencyLocal = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -940,7 +935,7 @@ export default function LaboursPage() {
                     </option>
                   ))}
                 </Select>
-                <BalanceWidget info={mainBalanceInfo} />
+                <BalanceWidget info={balanceInfo} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

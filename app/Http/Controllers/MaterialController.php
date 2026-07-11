@@ -7,6 +7,7 @@ use App\Models\Material;
 use App\Models\ProjectSupplier;
 use App\Models\Supplier;
 use App\Traits\ApiResponse;
+use App\Traits\HasMainBalance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ use Inertia\Inertia;
 
 class MaterialController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HasMainBalance;
 
     const PATH = '/materials';
 
@@ -77,6 +78,14 @@ class MaterialController extends Controller
 
         $total = (float) $data['quantity'] * (float) $data['unitPrice'];
         $data['totalPrice'] = $total;
+
+        $available = $this->availableBalance($data['projectId'], 'MATERIALS');
+        if ($total > $available) {
+            return $this->apiBadRequest(
+                $this->insufficientBalanceMessage($available, $data['projectId'], 'MATERIALS'),
+                self::PATH
+            );
+        }
 
         [$material, $cashOut] = DB::transaction(function () use ($data, $total, $isNewSupplier) {
             $material = Material::create($data);
@@ -163,6 +172,17 @@ class MaterialController extends Controller
             $quantity = $data['quantity'] ?? $material->quantity;
             $unitPrice = $data['unitPrice'] ?? $material->unitPrice;
             $data['totalPrice'] = (float) $quantity * (float) $unitPrice;
+        }
+
+        $newProjectId = $data['projectId'] ?? $material->projectId;
+        $newTotalPrice = $data['totalPrice'] ?? (float) $material->totalPrice;
+        $existingCashOutId = CashOut::where('materialId', $material->id)->value('id');
+        $available = $this->availableBalance($newProjectId, 'MATERIALS', $existingCashOutId);
+        if ($newTotalPrice > $available) {
+            return $this->apiBadRequest(
+                $this->insufficientBalanceMessage($available, $newProjectId, 'MATERIALS'),
+                self::PATH
+            );
         }
 
         DB::transaction(function () use ($material, $data) {

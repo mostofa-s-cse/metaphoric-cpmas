@@ -6,6 +6,7 @@ use App\Models\CashOut;
 use App\Models\Employee;
 use App\Models\Salary;
 use App\Traits\ApiResponse;
+use App\Traits\HasMainBalance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Inertia\Inertia;
 
 class EmployeeController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HasMainBalance;
 
     const PATH = '/employees';
 
@@ -182,6 +183,17 @@ class EmployeeController extends Controller
         $paymentStatus = 'DUE';
         if ($paidAmount > 0) {
             $paymentStatus = $paidAmount >= $netSalary ? 'PAID' : 'PARTIAL';
+        }
+
+        if ($paidAmount > 0) {
+            $projectId = $data['projectId'] ?? null;
+            $available = $this->availableBalance($projectId, 'EMPLOYEE_SALARY');
+            if ($paidAmount > $available) {
+                return $this->apiBadRequest(
+                    $this->insufficientBalanceMessage($available, $projectId, 'EMPLOYEE_SALARY'),
+                    self::PATH . '/salaries'
+                );
+            }
         }
 
         [$salary, $cashOut] = DB::transaction(function () use (
